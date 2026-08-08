@@ -1,0 +1,86 @@
+# -------- Python --------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.Python
+
+# -------- Virtual Environment --------
+venv/
+.venv/
+env/
+.env/
+
+# -------- IDE & Editor --------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# -------- Testing --------
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# -------- FastAPI / HTTP --------
+# (no common artifacts)
+
+# -------- Database (M3) --------
+*.db
+*.sqlite
+*.sqlite3
+prisma/dev.db
+alembic/versions/__pycache__/
+
+# -------- File Uploads / Workspace Data (M3) --------
+uploads/
+data/
+workspace/
+storage/
+
+# -------- Docker (M4) --------
+.docker/
+
+# -------- LLM / AI (M5–M7) --------
+# Model files (large, not committed)
+*.bin
+*.pt
+*.pth
+*.gguf
+*.onnx
+# API keys & secrets
+.env.local
+.env.production
+*.key
+
+# -------- Logs --------
+*.log
+logs/
+
+# -------- Config / Secrets --------
+# Keep .env.example but ignore actual .env files
+.env
+.env.*
+!.env.example
+*.pem
+*.cert
+config/local.yaml
+config/local.yml
+
+# -------- Misc --------
+# OS files
+*.dylib
+# Jupyter (optional; mostly not needed in production)
+.ipynb_checkpoints/
