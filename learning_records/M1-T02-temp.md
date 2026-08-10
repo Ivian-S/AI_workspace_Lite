@@ -1,208 +1,151 @@
 # M1-T02｜Python 对象引用与可变对象
 
-这一节对应附件中的：
+状态：已完成
 
-* `list / dict / set / tuple`
-* 可变对象与不可变对象
-* 对象引用
-* 浅拷贝与深拷贝
-* 参数传递
+完成日期：2026-08-10
 
-附件特别用 `a = {...}; b = a` 强调：**`a` 和 `b` 指向的是同一个对象，并不是两份数据。** 
+## 完成内容
 
----
+本任务围绕 Python 中的对象引用、可变对象、浅拷贝、独立复制和函数参数共享对象展开，并将相关概念集成到 AI Workspace Lite 的 Project 数据结构中。
 
-## 1. 本节目标（对应附件中的验收标准）
+完成内容包括：
 
-完成这一卡以后，你必须能解释下面代码为什么会这样：
+* 理解变量名称与对象之间的引用关系。
+* 验证 `b = a` 只建立新的对象引用，而不会复制对象。
+* 区分 `==` 与 `is`：
+
+  * `==` 比较对象的值。
+  * `is` 判断是否为同一个对象。
+* 理解 `list`、`dict` 等可变对象被多个变量共享时产生的状态污染问题。
+* 理解函数参数绑定到传入对象后，函数内部的原地修改可以影响调用方持有的对象。
+* 理解 `dict.copy()` 属于浅拷贝，嵌套可变对象仍可能共享。
+* 理解深拷贝能够解决嵌套对象共享问题，同时认识其时间、内存和设计层面的成本。
+* 认识 Python 可变默认参数的共享风险，并学习使用 `None` 后在函数内部创建新列表的方式避免共享。
+* 区分“明确原地修改”和“返回新对象”两种函数设计。
+
+## 代码变更
+
+### `app/project_state.py`
+
+新增 Project 的基础数据行为。
+
+`create_project(name)`：
+
+* 正确保留传入的项目名称。
+* 每次调用独立创建 `tags` 列表。
+* 每次调用独立创建 `members` 列表。
+
+当前结构：
 
 ```python
-project_a = {
-    "name": "LLM Experiment",
-    "tags": ["research"],
+{
+    "name": name,
+    "tags": [],
+    "members": [],
 }
-
-project_b = project_a
-
-project_b["tags"].append("urgent")
-
-print(project_a)
 ```
 
-输出中的 `project_a` 也会出现：
+实现已经保证不同 Project 不会因为默认数据结构而共享 `tags` 或 `members`。
+
+新增 `add_tag_in_place()`：
+
+* 使用 `append()` 修改传入 Project 的 `tags`。
+* 明确体现 in-place mutation。
+* 调用方与函数参数共享同一个 Project 及其内部 `tags` 对象，因此调用后原 Project 会发生变化。
+
+新增 `with_tag()`：
+
+* 不修改原 Project。
+* 创建新的 Project 字典。
+* 为返回结果创建新的 `tags` 列表。
+* 用于比较“原地修改”和“返回新值”两种数据处理方式。
+
+新增可变默认参数实验：
+
+* `create_project_test1(name, tags=[])` 用于观察可变默认参数可能造成的列表共享问题。
+* `create_project_test2(name, tags=None)` 使用 `None` 后在函数内部创建列表，避免不同调用意外共享同一默认列表。
+
+新增 `clone_project()`：
+
+* 返回新的 Project 字典。
+* 为当前 Project 数据结构中的 `tags` 创建独立列表。
+* 为 `members` 创建独立列表。
+* 不直接使用 `deepcopy()`，而是根据当前明确的数据结构手工复制需要隔离的可变字段。
+
+当前选择手工复制是有意的：现阶段 Project 结构简单，可以明确知道哪些字段需要独立；如果未来 `members` 等字段内部继续包含嵌套 `dict/list`，需要重新评估该复制策略。
+
+### `tests/test_project_state.py`
+
+新增 6 个专项测试场景：
+
+1. 验证赋值后两个变量引用同一个 Project。
+2. 验证 `add_tag_in_place()` 会修改原 Project。
+3. 验证 `with_tag()` 返回新 Project，并且不会修改原 `tags`。
+4. 验证两个独立创建的 Project 不共享 `members`。
+5. 验证 `dict.copy()` 的浅拷贝仍然共享嵌套 `members`。
+6. 验证 `clone_project()` 返回不同 Project，并隔离 `tags` 和 `members`。
+
+专项测试最终成功被 pytest 收集：
 
 ```text
-urgent
+collected 6 items
+
+tests/test_project_state.py ...... [100%]
+
+6 passed
 ```
 
-你还必须能独立判断这四种操作的区别：
 
-```python
-b = a
-b = a.copy()
-b = copy.deepcopy(a)
-b = {"name": a["name"], "tags": list(a["tags"])}
-```
 
-本节最终目标不是背概念，而是防止以后出现这种真实后端 Bug：
+## 核心知识验收
 
-```text
-读取项目 A
-↓
-“复制”一份准备修改
-↓
-修改副本
-↓
-原项目 A 莫名其妙一起改变
-```
+### 1. 为什么 `b = a` 不是复制？
 
----
+因为赋值操作不会自动创建一个与 `a` 内容相同的新对象。
 
-# 2. 核心概念图解
-
-## 2.1 最重要的一句话
-
-Python 中：
-
-```text
-变量不是盒子。
-变量更像对象的标签。
-```
-
-看：
-
-```python
-a = {"count": 1}
-b = a
-```
-
-不要脑补成：
-
-```text
-a → {"count": 1}
-
-b → {"count": 1}
-```
-
-两份对象。
-
-真实模型更接近：
-
-```text
-             ┌────────────────┐
-a ──────────►│ {"count": 1}   │
-             │                │
-b ──────────►│ 同一个 dict     │
-             └────────────────┘
-```
-
-所以：
-
-```python
-b["count"] = 2
-```
-
-实际上是在修改那个**共享对象**：
-
-```text
-             ┌────────────────┐
-a ──────────►│ {"count": 2}   │
-             │                │
-b ──────────►│ 同一个 dict     │
-             └────────────────┘
-```
-
-于是：
-
-```python
-print(a["count"])
-```
-
-也是：
-
-```text
-2
-```
-
----
-
-## 2.2 `=` 默认不是复制
-
-这是这一节第一条纪律：
+执行：
 
 ```python
 b = a
 ```
 
-通常应该理解为：
+后，`a` 和 `b` 都可以引用同一个对象。
 
-> 让 `b` 也引用 `a` 当前引用的对象。
+因此对于可变对象，如果通过 `b` 原地修改对象，`a` 再访问时也会观察到同样的变化。
 
-而不是：
+### 2. `==` 与 `is` 有什么区别？
 
-> 克隆 `a`。
-
-可以验证：
-
-```python
-a = {"count": 1}
-b = a
-
-print(a is b)
-```
-
-结果：
+`==`：
 
 ```text
-True
+比较两个对象的值是否相等
 ```
 
-`is` 比较的是：
-
-> 是不是同一个对象。
-
-而：
-
-```python
-==
-```
-
-通常关注的是：
-
-> 值是否相等。
-
-例如：
-
-```python
-a = {"count": 1}
-b = {"count": 1}
-
-print(a == b)
-print(a is b)
-```
-
-结果通常是：
+`is`：
 
 ```text
-True
-False
+判断两个变量是否引用同一个对象
 ```
 
-也就是：
+因此可能出现：
 
-```text
-内容相同
-≠
-同一个对象
+```python
+a == b
 ```
 
----
+为 `True`，但：
 
-## 2.3 可变对象与不可变对象
+```python
+a is b
+```
 
-M1 阶段先记住最常见的。
+为 `False`。
 
-### 常见可变对象
+### 3. 为什么 `dict.copy()` 可能污染原数据？
+
+`dict.copy()` 只建立新的最外层字典。
+
+如果字典内部保存：
 
 ```text
 list
@@ -210,1071 +153,282 @@ dict
 set
 ```
 
-例如：
+等可变对象，新旧字典中的对应字段仍可能引用同一个嵌套对象。
+
+因此修改副本中的嵌套列表，有可能同时改变原字典观察到的数据。
+
+### 4. 为什么函数执行 `add_tag_in_place(project, ...)` 后，函数外 Project 也会变化？
+
+调用函数时并不会自动复制完整 Project。
+
+函数形参 `project` 与调用方变量可以绑定到同一个 Project 对象。
+
+Project 中的 `tags` 又是一个可变列表，而：
 
 ```python
-tags = ["python"]
-
-tags.append("backend")
+project["tags"].append(...)
 ```
 
-原对象发生改变。
+是原地修改该列表。
 
----
+因此函数执行结束后，调用方仍然引用已经被修改的同一个对象，自然能够看到变化。
 
-### 常见不可变对象
+### 5. `deepcopy()` 解决什么问题？为什么不能无脑使用？
+
+深拷贝会递归处理嵌套数据，在适用情况下可以避免浅拷贝留下的嵌套对象共享引用问题。
+
+但不应该把 `deepcopy()` 当成所有引用问题的默认答案，因为大型对象的深拷贝可能：
+
+* 消耗额外内存。
+* 增加运行时间。
+* 复制本来应该共享的对象。
+* 掩盖数据结构和函数职责设计问题。
+
+更合理的原则是首先明确：
 
 ```text
-int
-float
-bool
-str
-tuple
+哪些对象应该共享？
+哪些对象必须独立？
+这个函数应该修改原对象还是返回新对象？
 ```
 
-例如：
+然后选择对应的数据复制方式。
 
-```python
-name = "Workspace"
-name = name + " Lite"
-```
+## 数据流总结
 
-这不是把原字符串内部改掉。
-
-更接近：
+### 原地修改
 
 ```text
-旧字符串：
-"Workspace"
-
-↓
-
-创建新字符串：
-"Workspace Lite"
-
-↓
-
-让 name 改为引用新字符串
-```
-
----
-
-## 2.4 后端开发真正危险的是“嵌套可变对象”
-
-例如：
-
-```python
-project = {
-    "name": "AI Workspace",
-    "tags": ["python", "backend"],
-}
-```
-
-结构是：
-
-```text
-project
-  │
-  ▼
-dict
-├── "name" ──► str
-│
-└── "tags" ──► list
-                ├── "python"
-                └── "backend"
-```
-
-这里：
-
-```text
-dict 是可变的
-list 也是可变的
-```
-
-这会直接引出浅拷贝问题。
-
----
-
-## 2.5 浅拷贝：只复制第一层
-
-看：
-
-```python
-original = {
-    "name": "AI Workspace",
-    "tags": ["python"],
-}
-
-copied = original.copy()
-```
-
-此时：
-
-```python
-original is copied
-```
-
-是：
-
-```text
-False
-```
-
-看起来复制成功了。
-
-但是：
-
-```python
-original["tags"] is copied["tags"]
-```
-
-却是：
-
-```text
-True
-```
-
-结构实际上是：
-
-```text
-original ──► dict A
-                │
-                └── tags ───┐
-                             │
-                             ▼
-                         list X
-
-copied ────► dict B          ▲
-                │            │
-                └── tags ────┘
-```
-
-两个 `dict` 不一样。
-
-但是里面的 `tags` 仍然是**同一个 list**。
-
-所以：
-
-```python
-copied["tags"].append("urgent")
-```
-
-会导致：
-
-```python
-original["tags"]
-```
-
-一起发生变化。
-
-这是非常经典的 Bug。
-
----
-
-## 2.6 深拷贝
-
-Python 提供：
-
-```python
-from copy import deepcopy
-```
-
-然后：
-
-```python
-copied = deepcopy(original)
-```
-
-概念上变成：
-
-```text
-original ──► dict A
-                │
-                ▼
-             list X
-
-
-copied ────► dict B
-                │
-                ▼
-             list Y
-```
-
-于是：
-
-```python
-original["tags"] is copied["tags"]
-```
-
-是：
-
-```text
-False
-```
-
-但是不要形成一个坏习惯：
-
-> “不知道引用关系怎么办？全部 `deepcopy()`。”
-
-**不允许这么学。**
-
-大型对象的深拷贝可能：
-
-* 浪费内存；
-* 增加运行时间；
-* 复制本来应该共享的对象；
-* 掩盖数据结构设计问题。
-
-我们优先搞清楚：
-
-> **到底哪部分数据需要独立。**
-
----
-
-## 2.7 函数参数也遵循同样的规则
-
-看：
-
-```python
-def add_tag(project, tag):
-    project["tags"].append(tag)
-```
-
-调用：
-
-```python
-project = {
-    "name": "AI Workspace",
-    "tags": [],
-}
-
-add_tag(project, "python")
-```
-
-数据流：
-
-```mermaid
-flowchart LR
-    A["调用者变量 project"] --> C["同一个 dict 对象"]
-    B["函数参数 project"] --> C
-    C --> D["tags list"]
-    D --> E["append('python')"]
-```
-
-函数并没有自动复制一份项目。
-
-函数参数 `project` 也绑定到了同一个对象。
-
-所以函数执行结束以后：
-
-```python
-print(project["tags"])
-```
-
-得到：
-
-```text
-["python"]
-```
-
-不要机械地说：
-
-> “Python 是引用传递。”
-
-更准确的理解是：
-
-> **调用函数时，参数名称会绑定到传入的那个对象。**
-
-目前理解到这里足够。
-
----
-
-# 3. 最小可行性代码（Minimal Viable Code）
-
-这一卡开始给 AI Workspace Lite 增加一点真正的领域数据行为。
-
-但仍然**不引入 class / dataclass**。
-
-它们属于 M1-T03 / T04。
-
-目前先用 `dict`。
-
----
-
-## 数据流先看清楚
-
-我们要实现两种不同操作：
-
-### 操作 A：明确修改原项目
-
-```text
-Project dict
-↓
+调用者 project
+        │
+        ▼
+同一个 Project dict
+        │
+        ▼
+同一个 tags list
+        │
 add_tag_in_place()
-↓
-修改原来的 tags
-↓
-调用者看到变化
+        │
+        ▼
+append()
+        │
+        ▼
+原列表发生变化
+        │
+        ▼
+调用者观察到变化
 ```
 
-### 操作 B：生成修改后的新项目
+### 返回新 Project
 
 ```text
-Project dict
-↓
+original Project
+        │
+        ▼
 with_tag()
-↓
-创建新的 dict
-+
-创建新的 tags list
-↓
-原项目保持不变
+        │
+        ├── 创建新的 dict
+        │
+        └── 创建新的 tags list
+                 │
+                 ▼
+           updated Project
+
+original 保持不变
 ```
 
-这两种都可以是正确设计。
-
-真正危险的是：
-
-> 函数名字看起来像“生成新数据”，实际上偷偷修改原对象。
-
----
-
-## 新增 `/project/app/project_state.py`
-
-```python
-# 新增：app/project_state.py
-
-
-def create_project(name):
-    return {
-        "name": name,
-        "tags": [],
-    }
-
-
-def add_tag_in_place(project, tag):
-    project["tags"].append(tag)
-
-
-def with_tag(project, tag):
-    return {
-        **project,
-        "tags": [*project["tags"], tag],
-    }
-```
-
-现在逐个看。
-
----
-
-### `create_project()`
-
-```python
-def create_project(name):
-    return {
-        "name": name,
-        "tags": [],
-    }
-```
-
-每调用一次：
-
-```python
-project_a = create_project("A")
-project_b = create_project("B")
-```
-
-应该得到两个独立的 `tags` list。
-
-也就是：
+### 浅拷贝
 
 ```text
-project_a ─► dict A ─► list A
-
-project_b ─► dict B ─► list B
+original dict ──► members list
+                         ▲
+                         │
+copied dict ─────────────┘
 ```
 
-而不能：
+最外层字典不同，但嵌套列表仍然可能共享。
+
+### 当前 `clone_project()`
 
 ```text
-project_a ─► dict A ─┐
-                     ├──► 同一个 tags list
-project_b ─► dict B ─┘
+original dict ──► original tags
+             └──► original members
+
+cloned dict   ──► cloned tags
+             └──► cloned members
 ```
 
----
+针对当前 Project 结构，需要隔离的两个可变字段已经显式复制。
 
-### `add_tag_in_place()`
+## 验证命令及结果
 
-```python
-def add_tag_in_place(project, tag):
-    project["tags"].append(tag)
+### M1-T02 专项测试
+
+```bash
+pytest tests/test_project_state.py
 ```
 
-这个函数的名字故意包含：
+结果：
 
 ```text
-in_place
+collected 6 items
+tests/test_project_state.py ...... [100%]
+
+6 passed
 ```
 
-告诉调用者：
+### 项目全量回归测试
 
-> 我会修改你传进来的对象。
-
-调用：
-
-```python
-project = create_project("Workspace")
-
-add_tag_in_place(project, "python")
-```
-
-之后：
-
-```python
-project
-```
-
-已经改变。
-
-这是**有意识的 mutation**。
-
-它不一定是坏事。
-
----
-
-### `with_tag()`
-
-```python
-def with_tag(project, tag):
-    return {
-        **project,
-        "tags": [*project["tags"], tag],
-    }
-```
-
-我们的目标则是：
-
-```text
-输入项目
-↓
-保持不变
-
-返回项目
-↓
-拥有新增 tag
-```
-
-例如：
-
-```python
-original = create_project("Workspace")
-
-updated = with_tag(original, "python")
-```
-
-应该满足：
-
-```python
-original["tags"] == []
-updated["tags"] == ["python"]
-```
-
-而且：
-
-```python
-original is not updated
-original["tags"] is not updated["tags"]
-```
-
-这才真正实现数据隔离。
-
----
-
-## 新增测试
-
-在现有测试之外新增：
-
-```python
-# 新增：tests/test_project_state.py
-
-from app.project_state import (
-    add_tag_in_place,
-    create_project,
-    with_tag,
-)
-
-
-def test_assignment_shares_same_project():
-    project_a = create_project("Workspace")
-
-    project_b = project_a
-    project_b["name"] = "Changed"
-
-    assert project_a["name"] == "Changed"
-    assert project_a is project_b
-
-
-def test_in_place_operation_changes_original_project():
-    project = create_project("Workspace")
-
-    add_tag_in_place(project, "python")
-
-    assert project["tags"] == ["python"]
-
-
-def test_with_tag_does_not_change_original_project():
-    original = create_project("Workspace")
-
-    updated = with_tag(original, "python")
-
-    assert original["tags"] == []
-    assert updated["tags"] == ["python"]
-
-    assert original is not updated
-    assert original["tags"] is not updated["tags"]
-
-
-def test_projects_do_not_share_tag_lists():
-    project_a = create_project("A")
-    project_b = create_project("B")
-
-    add_tag_in_place(project_a, "python")
-
-    assert project_a["tags"] == ["python"]
-    assert project_b["tags"] == []
-```
-
-运行：
+执行：
 
 ```bash
 pytest
 ```
 
-你的原有：
+结果：
 
 ```text
-2 passed
+collected 8 items
+
+tests/test_project_state.py ...... [ 75%]
+tests/test_smoke.py ..             [100%]
+
+8 passed in 0.10s
 ```
 
-现在至少应该增加这 4 个测试。
+这证明：
 
----
+* M1-T02 的 6 个专项测试全部通过。
+* M1-T01 原有的 2 个 smoke tests 没有被此次修改破坏。
+* 当前项目全量测试回归通过。
 
-# 4. 项目集成指导（如何融入 AI Workspace Lite）
+### Git 验证
 
-目前项目结构只增量增加：
+最终状态：
 
 ```text
-/project
-├── app/
-│   ├── __init__.py
-│   ├── info.py
-│   ├── main.py
-│   ├── project_snapshot.py
-│   └── project_state.py       # 新增
-│
-└── tests/
-    ├── test_smoke.py
-    └── test_project_state.py  # 新增
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
 ```
 
-**不要修改 `main.py` 来演示这些函数。**
 
-原因很简单：
 
-`main.py` 是程序入口，不应该逐渐变成我们的课堂实验本。
+说明 M1-T02 代码已经进入版本控制，并完成当前 Git 工作区收口。
 
-我们已经开始建立第一个边界：
+## Code Review 结论
+
+本任务验收通过。
+
+过程中发现并修复了两个具有实际工程意义的问题：
+
+### 问题一：测试通过但业务代码实际错误
+
+初始 `create_project(name)` 没有真正使用传入的 `name`。
+
+同时测试设计恰好没有有效捕获该问题。
+
+这说明：
 
 ```text
-main.py
-→ 程序入口
-
-project_state.py
-→ Project 数据行为
+pytest 绿色
+≠
+业务逻辑一定正确
 ```
 
-现在它还非常粗糙。
+测试代码本身同样需要 Code Review。
 
-后面你会看到它演进为：
+后续测试应优先断言明确的业务预期，而不是只依靠过于宽松的条件。
+
+### 问题二：测试函数未被 pytest 收集
+
+浅拷贝测试最初没有采用 `test_...` 命名，因此虽然代码存在，但 pytest 没有执行。
+
+修正后专项测试由 5 个增加至 6 个并全部通过。
+
+这说明以后看到：
 
 ```text
-dict
-↓
-dataclass / model
-↓
-Service
-↓
-Repository
-↓
-数据库 ORM
+N passed
 ```
 
-但我们一次只跨一步。
-
----
-
-# 5. 避坑指南
-
-## 坑 1：以为 `b = a` 是复制
-
-错误认知：
-
-```python
-backup = project
-```
-
-然后：
-
-```python
-project["name"] = "Changed"
-```
-
-你以为：
+不能只看“passed”，还需要确认：
 
 ```text
-backup
+预期的测试是否真的被 collected
 ```
 
-还是旧版本。
+## 遗留问题
 
-不是。
+以下问题不阻塞本任务完成，但后续需要保持关注：
 
-如果：
+1. `clone_project()` 当前只对已知的 `tags` 和 `members` 做一层独立复制。
 
-```python
-backup is project
-```
+   如果以后数据变成：
 
-为：
+   ```python
+   "members": [
+       {
+           "name": "Alice",
+           "roles": ["admin"],
+       }
+   ]
+   ```
+
+   仅复制 `members` 外层列表已经不足以实现完全隔离。
+
+2. 测试应继续提高断言质量。
+
+   优先检查明确的最终值，而不是仅验证：
+
+   ```text
+   != 某个错误值
+   ```
+
+3. 学习实验函数如：
+
+   ```text
+   create_project_test1
+   create_project_test2
+   ```
+
+   当前用于理解可变默认参数是合理的；随着项目进入真正业务阶段，不应长期混入生产业务 API。
+
+4. 当前 Project 仍然使用裸 `dict` 表示。
+
+   这是本阶段刻意保留的简单结构，不提前引入复杂模型。下一阶段将开始学习类型注解与正式数据模型。
+
+## 本任务获得的核心能力
+
+完成 M1-T02 后，应能够独立判断：
 
 ```text
-True
+变量是否只是共享引用
+对象是否可变
+一次操作是否属于原地修改
+浅拷贝是否仍共享嵌套状态
+是否真的需要深拷贝
+函数是否会修改调用者持有的数据
+两个 Project 是否意外共享列表
 ```
 
-那它根本不是备份。
+本任务对应 Python 工程基础中的对象引用、可变对象、浅拷贝、深拷贝和参数传递能力，也是后续业务状态管理的重要基础。学习路线明确要求在 Python 第一阶段掌握这些内容。
 
----
+## 下一步
 
-## 坑 2：以为 `dict.copy()` 能彻底隔离数据
+下一任务：
 
-例如：
+**M1-T03｜函数、类型注解与数据模型**
 
-```python
-original = {
-    "name": "Workspace",
-    "tags": ["python"],
-}
+下一阶段将在当前 `dict` Project 的基础上继续解决：
 
-backup = original.copy()
-```
+* 函数参数与返回值契约。
+* 默认参数。
+* `None`。
+* Python 类型注解。
+* 数据模型。
+* `dataclass`。
+* 如何让 Project 从“随意拼接的字典”逐渐变成结构明确、可以被静态阅读和维护的数据对象。
 
-然后：
-
-```python
-backup["tags"].append("ai")
-```
-
-原来的：
-
-```python
-original["tags"]
-```
-
-也会改变。
-
-因为：
-
-```text
-dict 第一层复制了
-tags list 没复制
-```
-
----
-
-## 坑 3：误认为函数不会修改外部变量
-
-例如：
-
-```python
-def clear_tags(project):
-    project["tags"].clear()
-```
-
-调用以后：
-
-```python
-clear_tags(project)
-```
-
-外面的 `project` 也被修改。
-
-问题不在函数“越权”。
-
-问题在于：
-
-> 函数和调用者共享那个可变对象。
-
----
-
-## 坑 4：最危险的可变默认参数
-
-以后你很容易写出：
-
-```python
-def create_project(name, tags=[]):
-    return {
-        "name": name,
-        "tags": tags,
-    }
-```
-
-**不要这样写。**
-
-因为这个 `[]` 不会在每次调用时都自动重新创建。
-
-可能导致：
-
-```text
-Project A
-      │
-      ▼
-共享 tags list
-      ▲
-      │
-Project B
-```
-
-正确方式目前先记住：
-
-```python
-def create_project(name, tags=None):
-    if tags is None:
-        tags = []
-
-    return {
-        "name": name,
-        "tags": tags,
-    }
-```
-
-我们后面讲函数时还会回来检查这个问题。
-
----
-
-## 坑 5：以为 tuple 内部一定完全不可变
-
-例如：
-
-```python
-data = (
-    "Workspace",
-    ["python"],
-)
-```
-
-虽然：
-
-```text
-tuple 本身不能把第2个位置替换掉
-```
-
-但：
-
-```python
-data[1].append("backend")
-```
-
-完全可能成功。
-
-因为：
-
-```text
-tuple
-↓
-不能修改自己保存的引用
-
-但引用指向的 list
-↓
-仍然是可变对象
-```
-
-这是理解“对象”和“引用”的很好测试。
-
----
-
-## 坑 6：为了避免所有 mutation 就疯狂 `deepcopy`
-
-这同样不是成熟设计。
-
-真正应该问：
-
-```text
-这个函数的职责是什么？
-
-它应该：
-A. 修改现有对象？
-
-还是：
-B. 创建一个新的结果？
-```
-
-然后把行为设计清楚。
-
-比如：
-
-```python
-add_tag_in_place(...)
-```
-
-明确是 A。
-
-```python
-with_tag(...)
-```
-
-明确是 B。
-
-**清晰的函数契约，比到处 `deepcopy()` 更重要。**
-
----
-
-# 6. 🚨 独立验收任务（无 AI 辅助，请关闭对话框完成）
-
-这次验收重点不是“代码能跑”。
-
-我要检查你是否真的理解对象关系。
-
----
-
-## Task A：完成上述代码并运行测试
-
-独立新增：
-
-```text
-app/project_state.py
-tests/test_project_state.py
-```
-
-确保：
-
-```bash
-pytest
-```
-
-全部通过。
-
----
-
-## Task B：独立增加 `members`
-
-现在不要问我代码。
-
-把 Project 扩展为：
-
-```python
-{
-    "name": "...",
-    "tags": [],
-    "members": [],
-}
-```
-
-然后保证：
-
-```python
-project_a = create_project("A")
-project_b = create_project("B")
-```
-
-满足：
-
-```python
-project_a["members"] is not project_b["members"]
-```
-
-你必须自己新增对应测试。
-
----
-
-## Task C：制造一个浅拷贝 Bug
-
-自己写一个测试，构造：
-
-```python
-original
-```
-
-里面包含：
-
-```text
-members list
-```
-
-然后：
-
-```python
-copied = original.copy()
-```
-
-修改：
-
-```python
-copied["members"]
-```
-
-证明：
-
-```python
-original["members"]
-```
-
-也被修改。
-
-这个测试**应该通过**，因为它是在证明 Python 的浅拷贝行为，而不是证明我们的业务代码正确。
-
-测试名称请起得足够明确，例如表达：
-
-```text
-shallow copy shares nested members
-```
-
-但具体代码自己写。
-
----
-
-## Task D：修复这个共享问题
-
-再独立实现一个函数：
-
-```text
-clone_project()
-```
-
-要求：
-
-```python
-clone = clone_project(original)
-```
-
-之后：
-
-```text
-clone is not original
-clone["tags"] is not original["tags"]
-clone["members"] is not original["members"]
-```
-
-修改 clone：
-
-```text
-不能污染 original
-```
-
-这里你可以：
-
-* 手工复制必要字段；
-* 或研究 `copy.deepcopy`
-
-但需要在验收时解释：
-
-> **你为什么选择这种方式？**
-
-不能只回答：
-
-> “因为 ChatGPT / Google 说这样写。”
-
----
-
-## Task E：回答 5 个问题
-
-完成代码后，不看资料，自己写答案：
-
-```text
-1. 为什么 b = a 不是复制？
-
-2. == 和 is 的区别是什么？
-
-3. dict.copy() 为什么可能仍然污染原数据？
-
-4. 函数调用 add_tag(project, ...) 后，
-   为什么函数外的 project 会改变？
-
-5. deepcopy 能解决什么问题？
-   为什么又不应该无脑使用？
-```
-
----
-
-## 提交验收材料
-
-完成后回复：
-
-```text
-1. app/project_state.py
-
-2. tests/test_project_state.py
-
-3. pytest 输出
-
-4. git diff --stat
-   或最终 git status
-
-5. Task E 五道题的答案
-```
-
-我会以 Code Reviewer 身份重点找：
-
-* 共享 mutable default；
-* 意外 alias；
-* 浅拷贝误用；
-* 函数隐式修改调用者状态；
-* 无意义 `deepcopy`；
-* 测试是否真的验证了对象独立性。
-
-**这张卡不通过，我们不进入 M1-T03。**
-
----
-
-# 7. 官方参考锚点
-
-本节只需要查 Python 官方文档，不看各种“Python 内存模型一文讲透”。
-
-**Python Language Reference — Data model**
-[Python Data Model](https://docs.python.org/3/reference/datamodel.html)
-
-重点理解：
-
-```text
-objects
-identity
-type
-value
-mutable / immutable
-```
-
-**Python Standard Library — `copy`**
-[`copy` — Shallow and deep copy operations](https://docs.python.org/3/library/copy.html)
-
-重点只看：
-
-```text
-copy.copy()
-copy.deepcopy()
-浅拷贝与深拷贝的区别
-```
-
-最后记住 M1-T02 最重要的四行：
-
-```text
-变量 ≠ 对象
-
-赋值 ≠ 复制
-
-浅拷贝 ≠ 完全独立
-
-函数参数 ≠ 自动复制数据
-```
-
-完成独立验收后，把材料贴回来，我直接做 **M1-T02 Code Review**。
+暂不进入类的复杂职责拆分；类、组合和模块职责将在 M1-T04 单独处理。
