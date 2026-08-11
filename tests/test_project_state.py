@@ -13,8 +13,6 @@ def test_assignment_share_same_project():
     project_a = create_project("AI Workspace Lite")
     project_b = project_a
     project_b.name += "Changed"
-
-    assert project_a.name != "Changed"
     assert project_a is project_b
 
 def test_in_place_operation_changes_original_project():
