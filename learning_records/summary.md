@@ -8,8 +8,11 @@
 
   * **M1-T01｜建立 `/project` 与 Python 工程骨架**
   * **M1-T02｜Python 对象引用与可变对象**
+  * **M1-T03｜函数、类型注解与数据模型**
 
-当前项目仍处于整个学习路线的第一阶段。M1 的重点不是重新学习基础 Python 语法，而是逐步建立可维护的 Python 工程能力，为后续 FastAPI、数据库、Docker 和 AI 功能打基础。
+当前项目仍处于：
+
+M1｜Python 工程化地基
 
 ## 当前阶段目标
 
@@ -201,6 +204,160 @@ M1 阶段的总体目标是将项目从单文件脚本逐步发展为**可维护
   * 测试本身同样需要 Code Review：曾出现测试通过但业务代码实际上没有正确使用 `name` 参数的问题；
   * 曾出现测试函数因为没有使用 `test_...` 命名而未被 pytest 收集的问题，因此后续不能只关注 `passed`，还应确认预期测试确实被 collected。
 
+### M1-T03：函数、类型注解与数据模型
+
+* **完成日期**：2026-08-11
+
+* **核心产出**：
+
+  新增数据模型模块：
+
+  ```text
+  app/models.py
+  ```
+
+  新增 `Project` dataclass：
+
+  ```python
+  @dataclass
+  class Project:
+      name: str
+      description: str | None = None
+      tags: list[str] = field(default_factory=list)
+      members: list[str] = field(default_factory=list)
+  ```
+
+  Project 从 M1-T02 的裸 `dict` 结构正式演进为字段明确的数据对象。
+
+  修改：
+
+  ```text
+  app/project_state.py
+  ```
+
+  将核心 Project 操作增加类型注解并迁移至 dataclass：
+
+  * `create_project(...) -> Project`
+  * `add_tag_in_place(...) -> None`
+  * `with_tag(...) -> Project`
+  * `clone_project(...) -> Project`
+
+  `create_project()` 当前支持：
+
+  * `name: str`
+  * `description: str | None`
+  * `tags: list[str] | None`
+  * `members: list[str] | None`
+
+  对外部传入的 `tags` 和 `members` 建立独立列表，避免无意共享调用者的可变对象。
+
+  独立验收中增加：
+
+  ```text
+  description
+  ```
+
+  字段。
+
+  其类型为：
+
+  ```python
+  str | None
+  ```
+
+  默认值为：
+
+  ```python
+  None
+  ```
+
+* **关键知识点**：
+
+  * 函数参数类型注解；
+  * 函数返回值类型注解；
+  * `None` 与可选类型；
+  * `str | None`；
+  * `list[str]`；
+  * `dataclass`；
+  * `field(default_factory=list)`；
+  * 类型注解与运行时校验的区别；
+  * 原地修改函数与返回新对象函数的接口差异；
+  * 外部可变对象与内部状态隔离；
+  * 数据模型增加字段后检查所有复制和重新构造路径；
+  * 测试绿色不等于测试断言一定有效。
+
+* **Code Review 结果**：
+
+  Review 中发现增加 `description` 后，最初版本的 `with_tag()` 创建新 Project 时遗漏该字段，会造成：
+
+  ```text
+  original.description 有值
+  → with_tag()
+  → updated.description 变为 None
+  ```
+
+  该问题属于真实的数据丢失回归。
+
+  已增加：
+
+  ```text
+  test_with_tag_preserves_description
+  ```
+
+  对该行为建立回归保护，最终测试通过。
+
+  Review 同时发现原对象引用测试中存在“测试通过但断言验证力度不足”的问题。
+
+  后续测试要求继续遵守：
+
+  ```text
+  断言真正验证需求
+  +
+  预期测试被 pytest collected
+  +
+  全量回归通过
+  ```
+
+* **测试结果**：
+
+  执行：
+
+  ```bash
+  pytest -v
+  ```
+
+  最终结果：
+
+  ```text
+  collected 13 items
+  13 passed in 0.08s
+  ```
+
+  当前组成：
+
+  ```text
+  tests/test_project_state.py   11
+  tests/test_smoke.py            2
+  -------------------------------
+  总计                          13
+  ```
+
+* **Git 状态**：
+
+  M1-T03 修改已提交 Git，并已同步远程仓库。
+
+* **遗留问题或注意事项**：
+
+  * Python 类型注解目前主要用于表达设计意图和辅助静态分析，不等于完整运行时输入校验；
+  * 当前没有提前引入 Pydantic；
+  * `clone_project()` 仍然基于当前简单的 `list[str]` 数据结构显式复制字段；
+  * 如果未来出现更复杂的嵌套可变对象，需要重新评估复制策略；
+  * `Project` 当前主要负责表达数据，不提前承担 Service / Storage 等业务职责；
+  * M1-T02 中的部分学习实验函数和历史注释后续需要逐步清理；
+  * 数据模型新增字段以后，必须检查所有构造新对象、复制对象、序列化对象的代码路径。
+
+---
+
 ## 项目结构与文件职责
 
 当前目录快照：
@@ -212,6 +369,8 @@ M1 阶段的总体目标是将项目从单文件脚本逐步发展为**可维护
 ├── StudyPLAN.md
 ├── app
 │   ├── __init__.py
+│   ├── models.py
+│   ├── project_state.py
 │   ├── __pycache__
 │   │   ├── __init__.cpython-312.pyc
 │   │   ├── __init__.cpython-314.pyc
@@ -266,20 +425,52 @@ APP_VERSION
 
 M1-T01 中已实现启动时输出应用名称及版本，用于验证包安装、模块导入以及程序入口能够正常工作。
 
+
+#### `app/models.py`
+
+当前负责定义项目中的基础数据模型。
+
+目前包含：
+
+```text
+Project
+```
+
+`Project` 当前字段：
+
+```text
+name
+description
+tags
+members
+```
+
+该模块的目标是明确：
+
+```text
+Project 数据长什么样
+```
+
+而不是承担复杂业务操作。
+
 #### `app/project_state.py`
 
-当前 M1 阶段最重要的业务学习模块之一。
+* 创建 Project；
+* Project tag 原地修改；
+* 返回新的带 tag Project；
+* Project 克隆；
+* 对调用者传入的可变列表进行状态隔离；
+* 保留部分 M1-T02 对象引用和可变对象学习实验。
 
-负责 Project 基础数据结构及其状态操作，目前承载：
+当前已经开始使用：
 
-* Project 创建；
-* `tags` / `members` 可变字段初始化；
-* 原地修改实验；
-* 返回新 Project 的状态更新方式；
-* 可变默认参数实验；
-* Project 克隆及可变字段隔离。
+```text
+Project dataclass
++
+函数类型注解
+```
 
-该模块目前主要用于把 Python 的对象引用、可变性和复制语义落实到真实项目数据中。
+但尚未进入正式 Service / Storage 分层。
 
 #### `app/temp.py`
 
@@ -443,8 +634,8 @@ M1-T01 已完成项目的可编辑安装配置。
 当前项目全量测试：
 
 ```text
-总测试数：8
-通过：8
+总测试数：13
+通过：13
 失败：0
 通过率：100%
 ```
@@ -452,10 +643,10 @@ M1-T01 已完成项目的可编辑安装配置。
 组成：
 
 ```text
-tests/test_smoke.py           2
-tests/test_project_state.py   6
+tests/test_smoke.py            2
+tests/test_project_state.py   11
 -------------------------------
-总计                          8
+总计                          13
 ```
 
 ### 测试命令
@@ -491,12 +682,18 @@ M1-T01 中也验证过使用项目虚拟环境直接执行：
 
 主要覆盖：
 
-* 多个变量引用同一个对象；
-* 函数原地修改共享对象；
-* 返回新对象而不修改原 `tags`；
-* 不同 Project 的 `members` 是否独立；
-* `dict.copy()` 浅拷贝造成的嵌套引用共享；
-* `clone_project()` 对当前 `tags` 和 `members` 的隔离。
+* 多变量引用同一个 Project；
+* 原地修改；
+* 返回新 Project；
+* 不同 Project 默认列表隔离；
+* `dict.copy()` 浅拷贝嵌套对象共享；
+* Project 克隆；
+* `create_project()` 返回 Project 类型；
+* 外部输入 tags 与 Project 内部状态隔离；
+* `description` 默认值；
+* `description` 显式赋值；
+* `with_tag()` 创建新对象时保持 `description`；
+* 应用名称和版本冒烟测试。
 
 当前测试还验证了一个重要工程原则：
 
@@ -506,9 +703,9 @@ M1-T01 中也验证过使用项目虚拟环境直接执行：
 
 ## 核心设计决策与已知问题
 
-### 1. Project 当前使用裸 `dict`
+### Project 已从裸 dict 演进为 dataclass
 
-当前 Project 数据模型：
+M1-T02 中：
 
 ```python
 {
@@ -518,140 +715,125 @@ M1-T01 中也验证过使用项目虚拟环境直接执行：
 }
 ```
 
-这是 M1-T02 阶段有意保留的简单设计。
+属于刻意保留的学习型数据结构。
 
-优点是可以集中学习：
-
-* 对象引用；
-* dict 的可变性；
-* 嵌套 list；
-* 浅拷贝；
-* 函数修改行为。
-
-当前还没有提前引入正式的数据模型抽象。
-
-下一阶段 M1-T03 将开始解决类型注解与数据模型问题。
-
-### 2. `clone_project()` 采用显式手工复制
-
-当前没有直接采用：
+M1-T03 后，当前正式结构为：
 
 ```python
-copy.deepcopy()
+@dataclass
+class Project:
+    name: str
+    description: str | None = None
+    tags: list[str] = field(default_factory=list)
+    members: list[str] = field(default_factory=list)
 ```
 
-而是针对当前已知结构，显式复制：
+因此旧总结中：
 
 ```text
-tags
-members
+Project 当前使用裸 dict
 ```
 
-设计理由是当前结构足够简单，可以明确判断哪些字段需要隔离。
+已经失效，不应继续描述为当前事实。
 
-这种设计也避免把深拷贝作为处理所有引用问题的默认方案。
+### 类型注解暂不承担运行时校验
 
-### 3. 当前复制策略依赖数据结构保持简单
-
-如果未来数据变成类似：
+当前：
 
 ```python
-{
-    "members": [
-        {
-            "name": "Alice",
-            "roles": ["admin"],
-        }
-    ]
-}
+name: str
+description: str | None
 ```
 
-只复制 `members` 的外层 list 将无法保证所有内部对象完全隔离。
+主要负责：
 
-因此未来 Project 出现嵌套可变结构时，需要重新评估：
+* 表达代码意图；
+* 提高可读性；
+* 为 IDE 和静态检查提供类型信息。
 
-* 手工复制；
-* 更明确的数据模型；
-* 专门的 clone/copy 语义；
-* 是否确实需要深拷贝。
+当前阶段不提前引入 Pydantic 或其他复杂运行时校验体系。
 
-### 4. 可变默认参数存在共享风险
+### 可变字段使用 default_factory
 
-类似：
+`tags` 和 `members` 使用：
 
 ```python
-def create_project_test1(name, tags=[]):
-    ...
+field(default_factory=list)
 ```
 
-的函数可能让不同调用共享同一个默认 list。
+保证每个 Project 实例拥有独立列表。
 
-当前已经通过实验函数明确验证该风险。
+### 外部可变对象默认采取隔离策略
 
-更安全的模式是：
+`create_project()` 接收外部 `tags` / `members` 后建立新的 list，而不是默认共享同一引用。
 
-```python
-def create_project_test2(name, tags=None):
-    if tags is None:
-        tags = []
-```
-
-这些实验函数主要用于学习，不应长期混入正式生产业务 API。
-
-### 5. 测试质量本身需要持续 Review
-
-M1-T02 中已经出现过两个实际问题：
-
-* 业务代码错误，但原测试没有有效捕获；
-* 已编写测试因为命名不符合 `test_...` 规范而没有被 pytest 收集。
-
-因此后续测试需要同时确认：
+当前原则：
 
 ```text
-断言是否真正验证业务需求
-+
-预期测试是否被 collected
-+
-全量回归是否通过
+是否共享可变状态必须是明确设计决定，
+不能由无意的对象引用决定。
 ```
 
-而不能只关注最终的 `N passed`。
+### 新字段必须审计全部对象重建路径
 
-### 6. 当前仍处于学习型数据结构阶段
+M1-T03 已出现一次真实回归：
 
-目前 Project 还不是正式、强约束的数据对象。
+```text
+新增 description
+→ with_tag() 忘记复制
+→ 新对象 description 丢失
+```
 
-后续应逐步明确：
+因此后续每次数据模型新增或删除字段，都应检查：
 
-* 参数类型；
-* 返回值类型；
-* 可选值；
-* 默认值；
-* 字段结构；
-* 数据模型边界。
+```text
+构造函数
+clone/copy
+返回新对象函数
+持久化
+序列化
+测试
+```
 
-这些内容正是下一任务 M1-T03 的重点。
+随着项目进入数据库和 API 阶段，该检查范围还会继续扩大。
 
 ## 下一步计划
 
 下一个待执行任务：
 
-### M1-T03｜函数、类型注解与数据模型
+### M1-T04｜类、组合与模块职责
 
-该任务将在当前裸 `dict` Project 的基础上继续学习和改造：
+下一任务重点：
 
-* 函数参数；
-* 返回值；
-* 默认参数；
-* `None`；
-* Python 类型注解；
-* 数据模型；
-* `dataclass`；
-* 如何让 Project 从“随意拼接的字典”逐步发展为结构明确、容易静态阅读和维护的数据对象。
+* 类和对象职责；
+* 数据与行为的边界；
+* 组合；
+* 模块职责；
+* Model / Service / Storage 的最小职责认知；
+* 判断“代码应该放在哪里”。
 
-M1-T03 暂不进入复杂的类职责拆分。
+M1-T04 将基于当前 `Project` dataclass 继续演进。
 
-类、组合以及模块职责将在后续 **M1-T04** 单独处理。
+不会提前进入：
+
+```text
+FastAPI
+数据库
+ORM
+复杂设计模式
+```
+
+重点从：
+
+```text
+数据长什么样
+```
+
+逐步推进到：
+
+```text
+谁负责什么
+```
 
 ## 使用指南（给后续 AI 助手）
 
