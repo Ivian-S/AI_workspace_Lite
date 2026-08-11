@@ -9,11 +9,14 @@ from app.project_state import (
     clone_project,
 )
 
-def test_assignment_share_same_project():
+def test_assignment_shares_same_project() -> None:
     project_a = create_project("AI Workspace Lite")
     project_b = project_a
+
     project_b.name += "Changed"
     assert project_a is project_b
+    assert project_a.name == "AI Workspace LiteChanged"
+    assert project_b.name == "AI Workspace LiteChanged"
 
 def test_in_place_operation_changes_original_project():
     project = create_project("Workspace")
@@ -96,3 +99,13 @@ def test_create_project_description() -> None:
     assert project.description == "test_description"
     assert project2.description is None
 
+def test_with_tag_preserves_description() -> None:
+    original = create_project(
+        "Workspace",
+        description="backend learning",
+    )
+
+    updated = with_tag(original, "python")
+
+    assert original.description == "backend learning"
+    assert updated.description == "backend learning"
