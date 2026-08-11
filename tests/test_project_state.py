@@ -83,11 +83,12 @@ def test_projects_do_not_share_lists() -> None:
 
 def test_create_project__copies_input_tags() -> None:
     tags = ["python"]
-    project = create_project("demo", tags)
+    project = create_project("demo", tags=tags)
     tags.append("docker")
 
     assert tags == ["python", "docker"]
     assert project.tags == ["python"]
+
 
 def test_create_project_description() -> None:
     project = create_project("demo", "test_description")
