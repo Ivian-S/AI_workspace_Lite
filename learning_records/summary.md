@@ -9,6 +9,7 @@
   * **M1-T01｜建立 `/project` 与 Python 工程骨架**
   * **M1-T02｜Python 对象引用与可变对象**
   * **M1-T03｜函数、类型注解与数据模型**
+  * **M1-T04｜类、组合与模块职责**
 
 当前项目仍处于：
 
@@ -356,6 +357,179 @@ M1 阶段的总体目标是将项目从单文件脚本逐步发展为**可维护
   * M1-T02 中的部分学习实验函数和历史注释后续需要逐步清理；
   * 数据模型新增字段以后，必须检查所有构造新对象、复制对象、序列化对象的代码路径。
 
+### M1-T04：类、组合与模块职责
+
+* **完成日期**：2026-08-25
+
+* **核心产出**：
+
+  新增：
+
+  ```text
+  app/services.py
+  app/storage.py
+  tests/test_services.py
+  ```
+
+  项目开始形成最小职责结构：
+
+  ```text
+  Model
+    ↓
+  Service
+    ↓
+  Storage
+  ```
+
+  当前：
+
+  ```text
+  Project
+  ```
+
+  负责表达 Project 数据。
+
+  ```text
+  ProjectService
+  ```
+
+  负责创建、列出和查询 Project 等业务入口。
+
+  ```text
+  InMemoryProjectStorage
+  ```
+
+  负责通过内存 `list[Project]` 保存和读取 Project。
+
+* **ProjectService 当前主要接口**：
+
+  ```text
+  create_project(...)
+  list_projects()
+  get_project(name)
+  ```
+
+* **InMemoryProjectStorage 当前主要接口**：
+
+  ```text
+  save(project)
+  list_all()
+  get_by_name(name)
+  ```
+
+* **独立验收功能**：
+
+  新增按名称查询 Project：
+
+  ```text
+  service.get_project(name)
+          ↓
+  storage.get_by_name(name)
+          ↓
+  遍历 storage._projects
+          ↓
+  Project | None
+  ```
+
+  Service 不直接访问 Storage 内部 `_projects`。
+
+* **关键知识点**：
+
+  * class 与实例状态；
+  * 组合（Composition）；
+  * `has-a` 与 `is-a`；
+  * Model / Service / Storage 最小职责拆分；
+  * Service → Storage 依赖方向；
+  * 内部可变 collection 的封装；
+  * `Project | None`；
+  * 具体实现与抽象接口的区别；
+  * 构造函数传入依赖不等于已经依赖抽象；
+  * Model invariant 与 Service business rule；
+  * `frozen=True` 与字段校验的区别；
+  * 新存储方式应该作为独立实现演进，而不是破坏已有实现语义。
+
+* **Code Review 结果**：
+
+  代码职责边界通过：
+
+  ```text
+  ProjectService
+       ↓
+  InMemoryProjectStorage
+       ↓
+  list[Project]
+  ```
+
+  Service 没有直接访问：
+
+  ```text
+  _projects
+  ```
+
+  `get_project()` 将底层查询委托给：
+
+  ```text
+  get_by_name()
+  ```
+
+  `list_all()` 返回新的外层 list，避免调用者直接修改 Storage 内部 collection。
+
+  概念 Review 中进一步修正：
+
+  1. 当前虽然使用组合和构造函数注入，但：
+
+     ```python
+     storage: InMemoryProjectStorage
+     ```
+
+     仍然依赖具体实现，尚未建立统一 Storage 抽象。
+
+  2. 未来 JSON Storage 应新增独立：
+
+     ```text
+     JsonProjectStorage
+     ```
+
+     不应直接把 `InMemoryProjectStorage` 改造成文件存储。
+
+  3. 规则应根据性质判断归属：
+
+     ```text
+     Project 自身永远必须成立
+     → Model invariant
+
+     依赖业务操作 / 外部状态 / 上下文
+     → Service business rule
+
+     数据如何保存和读取
+     → Storage
+     ```
+
+  4. `frozen=True` 只限制对象创建后的字段重新赋值，不负责检查 `name` 是否为空。
+
+* **测试结果**：
+
+  ```bash
+  pytest -v
+  ```
+
+  最终：
+
+  ```text
+  collected 19 items
+  19 passed in 0.14s
+  ```
+
+  当前组成：
+
+  ```text
+  tests/test_project_state.py   11
+  tests/test_services.py         6
+  tests/test_smoke.py            2
+  -------------------------------
+  总计                          19
+  ```
+
 ---
 
 ## 项目结构与文件职责
@@ -382,6 +556,8 @@ M1 阶段的总体目标是将项目从单文件脚本逐步发展为**可维护
 │   │   └── project_state.cpython-314.pyc
 │   ├── info.py
 │   ├── main.py
+│   ├── services.py
+│   ├── storage.py
 │   ├── project_state.py
 │   └── temp.py
 ├── learning_records
@@ -395,6 +571,7 @@ M1 阶段的总体目标是将项目从单文件脚本逐步发展为**可维护
     │   └── test_smoke.cpython-314-pytest-9.1.1.pyc
     ├── test_project_state.py
     └── test_smoke.py
+    ├── test_services.py
 
 6 directories, 24 files
 ```
@@ -452,6 +629,58 @@ Project 数据长什么样
 ```
 
 而不是承担复杂业务操作。
+### `app/services.py`
+
+当前包含：
+
+```text
+ProjectService
+```
+
+职责：
+
+```text
+业务动作编排
++
+构造 Project
++
+调用 Storage
+```
+
+当前 Service 不直接管理底层：
+
+```text
+list[Project]
+```
+
+也不直接访问：
+
+```text
+storage._projects
+```
+
+### `app/storage.py`
+
+当前包含：
+
+```text
+InMemoryProjectStorage
+```
+
+职责：
+
+```text
+保存 Project
+列出 Project
+根据名称查询 Project
+维护内存中的 _projects
+```
+
+当前存储介质：
+
+```python
+list[Project]
+```
 
 #### `app/project_state.py`
 
@@ -508,6 +737,28 @@ M1-T02 新增的 Project 状态专项测试。
 * 浅拷贝的嵌套引用共享；
 * `clone_project()` 的字段隔离行为。
 
+#### `tests/test_services.py`
+
+新增 Service / Storage 职责测试。
+
+当前共：
+
+```text
+6 tests
+```
+
+覆盖：
+
+```text
+创建并保存
+多个 Project
+Storage 状态隔离
+内部 list 不泄漏
+名称查询成功
+名称查询不存在
+```
+
+---
 ### `learning_records/`
 
 存放已完成任务卡片的学习和工程记录。
@@ -631,11 +882,11 @@ M1-T01 已完成项目的可编辑安装配置。
 
 ### 当前测试总览
 
-当前项目全量测试：
+当前测试总览：
 
 ```text
-总测试数：13
-通过：13
+总测试数：19
+通过：19
 失败：0
 通过率：100%
 ```
@@ -643,10 +894,11 @@ M1-T01 已完成项目的可编辑安装配置。
 组成：
 
 ```text
-tests/test_smoke.py            2
-tests/test_project_state.py   11
--------------------------------
-总计                          13
+test_project_state.py   11
+test_services.py         6
+test_smoke.py            2
+---------------------------
+总计                    19
 ```
 
 ### 测试命令
@@ -702,6 +954,140 @@ M1-T01 中也验证过使用项目虚拟环境直接执行：
 除了关注测试是否绿色，还需要检查测试断言质量以及预期测试是否真的被 pytest 收集。
 
 ## 核心设计决策与已知问题
+
+### Model / Service / Storage 开始分离
+
+当前最小职责：
+
+```text
+Model
+→ 数据结构
+
+Service
+→ 业务动作与流程
+
+Storage
+→ 数据存取
+```
+
+这只是 M1 阶段的最小职责认知，不代表已经建立后续数据库阶段的完整 Repository 架构。
+
+### Service 使用组合而不是继承 Storage
+
+当前：
+
+```text
+ProjectService HAS-A Storage
+```
+
+因此：
+
+```python
+self._storage = storage
+```
+
+而不是：
+
+```python
+class ProjectService(InMemoryProjectStorage):
+```
+
+### 当前尚未建立 Storage 抽象
+
+当前类型：
+
+```python
+storage: InMemoryProjectStorage
+```
+
+意味着 Service 的类型声明仍然依赖具体实现。
+
+尚未引入：
+
+```text
+Protocol
+ABC
+Storage Interface
+Repository
+```
+
+这是当前阶段刻意保留的简单设计，不提前增加抽象层。
+
+### 内部 collection 不直接暴露
+
+Storage：
+
+```python
+list_all()
+```
+
+返回：
+
+```python
+list(self._projects)
+```
+
+避免调用者直接获得 Storage 内部 list。
+
+这里只隔离：
+
+```text
+外层 collection
+```
+
+并没有复制每个 Project 对象。
+
+### JSON Storage 尚未实现
+
+未来 JSON 持久化不应该破坏：
+
+```text
+InMemoryProjectStorage
+```
+
+的内存语义。
+
+概念上的演进方向：
+
+```text
+InMemoryProjectStorage
+JsonProjectStorage
+```
+
+JSON CRUD 留到 M1-T07。
+
+### Model invariant 与业务规则分开判断
+
+后续遇到“校验应该放哪里”时，不机械按照字段类型判断。
+
+原则：
+
+```text
+对象本身永远必须满足
+→ Model invariant
+
+依赖业务动作或外部状态
+→ Service
+
+数据存取机制
+→ Storage
+```
+
+### `frozen=True` 不等于字段校验
+
+`frozen=True` 主要限制对象创建后的字段重新赋值。
+
+它不会自动验证：
+
+```text
+name 是否为空
+```
+
+如果未来需要 Model invariant，需要显式校验逻辑。
+
+异常处理正式留到 M1-T06。
+
+---
 
 ### Project 已从裸 dict 演进为 dataclass
 
@@ -797,43 +1183,110 @@ clone/copy
 
 随着项目进入数据库和 API 阶段，该检查范围还会继续扩大。
 
+
+## 当前关键工程认知
+
+在已有对象引用、类型注解和数据模型基础上，增加：
+
+```text
+代码能放进某个类
+≠
+代码应该放进这个类
+
+文件拆开
+≠
+职责已经分离
+
+组合
+≠
+继承
+
+构造函数传入依赖
+≠
+已经依赖抽象接口
+
+Storage
+≠
+业务规则层
+
+Model invariant
+≠
+所有输入校验
+
+frozen=True
+≠
+字段值校验
+```
+
+当前开始使用以下问题判断代码位置：
+
+```text
+它是在描述数据吗？
+→ Model
+
+它是在组织业务动作吗？
+→ Service
+
+它是在处理数据如何存取吗？
+→ Storage
+```
+
+---
+
+## 当前遗留问题
+
 ## 下一步计划
 
-下一个待执行任务：
+* `ProjectService` 仍然直接使用 `InMemoryProjectStorage` 作为类型；
+* 尚未建立统一 Storage 抽象；
+* 尚未实现 JSON 持久化；
+* 尚未实现业务异常；
+* 尚未处理重复 Project 名称等业务规则；
+* `project_state.py` 中仍存在 M1-T02 / T03 学习实验代码；
+* 尚未系统学习 Python import、包搜索路径与循环导入。
 
-### M1-T04｜类、组合与模块职责
+这些均不阻塞 M1-T04 验收。
 
-下一任务重点：
+---
 
-* 类和对象职责；
-* 数据与行为的边界；
-* 组合；
-* 模块职责；
-* Model / Service / Storage 的最小职责认知；
-* 判断“代码应该放在哪里”。
+下一张待执行任务：
 
-M1-T04 将基于当前 `Project` dataclass 继续演进。
+### M1-T05｜模块、包与 Import 排错
 
-不会提前进入：
+重点：
+
+* Python module；
+* Python package；
+* `__init__.py`；
+* 绝对导入；
+* 项目根目录；
+* 模块搜索路径；
+* `ModuleNotFoundError`；
+* 不同启动位置对 import 的影响；
+* 循环导入认知与排查。
+
+这一卡重点不是继续增加业务功能，而是利用当前已经形成的：
 
 ```text
+models.py
+services.py
+storage.py
+project_state.py
+```
+
+真正理解多文件 Python 工程的模块关系与导入机制。
+
+不提前进入：
+
+```text
+M1-T06 异常处理
+M1-T07 JSON 持久化
 FastAPI
 数据库
-ORM
-复杂设计模式
 ```
 
-重点从：
+**当前正式进度：M1-T01 ～ M1-T04 已完成，下一卡为 M1-T05。**
 
-```text
-数据长什么样
-```
-
-逐步推进到：
-
-```text
-谁负责什么
-```
 
 ## 使用指南（给后续 AI 助手）
 
