@@ -1,5 +1,7 @@
+import pytest
 from app.services import ProjectService 
 from app.storage import InMemoryProjectStorage
+from app.exceptions import ProjectNotFoundError
 
 def test_service_creates_and_stores_project() -> None:
     storage = InMemoryProjectStorage()
@@ -56,9 +58,14 @@ def test_get_project_by_name_success() -> None:
 
     assert service.get_project("demo") == project
 
-def test_get_project_by_name_not_found() -> None:
+def test_get_project_raises_when_project_not_found() -> None:
     storage = InMemoryProjectStorage()
     service = ProjectService(storage)
 
-    assert service.get_project("demo") is None
+    with pytest.raises(
+        ProjectNotFoundError,
+        match="Project not found: missing",
+    ):
+        service.get_project("missing")
+    
 

@@ -1,10 +1,10 @@
 # AI Workspace Lite｜项目进度摘要
 
-> 最后更新：2026-08-26
+> 最后更新：2026-08-27
 >
 > 当前阶段：M1 Python 工程化地基
 >
-> 正式进度：M1-T01 ～ M1-T05 已完成，下一任务为 M1-T06
+> 正式进度：M1-T01 ～ M1-T06 已完成，下一任务为 M1-T07
 
 本文只保存便于接手项目的最新快照。各任务的学习过程、代码片段、Code Review 和完整验收记录，以同目录下的 `M1-Txx.md` 为准。
 
@@ -17,7 +17,8 @@
 | M1-T03 函数、类型注解与数据模型    | 已完成 | 2026-08-11 | 用 `dataclass` 建立 `Project`，补充类型注解和回归测试                         | [`M1-T03.md`](M1-T03.md) |
 | M1-T04 类、组合与模块职责       | 已完成 | 2026-08-25 | 初步拆分 Model / Service / Storage，实现内存存储和按名称查询                    | [`M1-T04.md`](M1-T04.md) |
 | M1-T05 模块、包与 Import 排错 | 已完成 | 2026-08-26 | 验证模块启动与脚本启动差异，掌握 `sys.path`、`__file__`、`find_spec()` 和循环导入基础排错 | [`M1-T05.md`](M1-T05.md) |
-| M1-T06 异常处理与业务异常       | 待开始 | —          | 下一任务：具体异常、`raise`、自定义异常与业务失败表达                                 | `StudyPLAN.md`           |
+| M1-T06 异常处理与业务异常 | 已完成 | 2026-08-27 | 新增 `ProjectNotFoundError`，将 Service 查询失败从 `None` 演进为明确业务异常，并使用 `pytest.raises()` 验证 | [`M1-T06.md`](M1-T06.md) |
+| M1-T07 JSON 持久化项目管理器 | 待开始 | — | 下一任务：完整 Project CRUD 与 JSON 文件持久化 | `StudyPLAN.md` |
 
 ## 当前可用能力
 
@@ -30,6 +31,10 @@
 - 能区分 package 内模块通过 `python -m ...` 启动与直接执行 `.py` 文件的差异。
 - 能使用 `sys.path`、模块 `__file__` 和 `importlib.util.find_spec()` 定位模块搜索与同名包问题。
 - 能识别基础循环导入，并结合 Model / Service / Storage 职责判断不合理的反向依赖。
+- `ProjectService.get_project()` 成功时保证返回 `Project`；项目不存在时抛出 `ProjectNotFoundError`。
+- `InMemoryProjectStorage.get_by_name()` 仍以 `Project | None` 表达底层查询结果，业务异常转换保持在 Service。
+- 已能区分正常空结果与异常失败，并使用 `pytest.raises()` 验证业务异常路径。
+- 已建立“只捕获能够处理的具体异常；无法处理则继续传播”的基础异常处理原则。
 ## 当前结构与职责
 
 ```text
@@ -41,7 +46,8 @@ project/
 │   ├── models.py            # Project 数据模型
 │   ├── project_state.py     # T02/T03 状态与复制实验
 │   ├── services.py          # Project 业务动作
-│   └── storage.py           # 内存存储实现
+│   ├── storage.py           # 内存存储实现
+│   └── exceptions.py        # 业务异常定义
 ├── tests/
 │   ├── test_smoke.py
 │   ├── test_project_state.py
@@ -67,7 +73,7 @@ project/
 
 ## 验证基线
 
-2026-08-26 在仓库自带虚拟环境中验证：
+2026-08-27 在仓库自带虚拟环境中验证：
 
 ```bash
 .venv/bin/python --version
@@ -96,29 +102,34 @@ project/
 - `field(default_factory=list)` 保证不同 `Project` 实例不共享默认列表。
 - 新增数据字段时，必须检查所有对象重建路径；M1-T03 曾修复 `with_tag()` 遗漏 `description` 的问题。
 - 测试通过之外，还应确认测试被 pytest 收集，并检查断言是否真正覆盖业务预期。
-
+- Storage 的“未查到”可以是正常查询结果 None；Service 的 get_project() 则把该结果解释为业务失败并抛出 ProjectNotFoundError。
+- raise 会中断当前正常控制流并向上传播；只有存在匹配的 except 时才会被处理。
+- except Exception 虽然不是裸 except，但会捕获绝大多数普通运行时异常，不应随意用它把错误转换成 None。
+- 当前层无法可靠恢复或转换异常时，应允许异常继续传播，而不是伪造正常返回值。
 ## 已知限制与后续归属
 
-| 限制                                | 计划处理任务         |
-| --------------------------------- | -------------- |
-| 尚未系统验证包、模块搜索路径和循环导入               | M1-T05         |
-| 查询不存在项目时返回 `None`，尚无自定义业务异常       | M1-T06         |
-| 只支持内存存储，进程退出后数据丢失                 | M1-T07         |
-| 尚无完整 CLI CRUD、重复名称规则和更新/删除能力      | M1-T07         |
-| 尚未完成 M1 综合调试与 Git 验收              | M1-T08         |
-| `project_state.py` 中仍有学习实验和较多教学注释 | 在正式业务模块稳定后评估清理 |
+| 限制                                | 计划处理任务                                         |
+| --------------------------------- | ---------------------------------------------- |
+| 只支持内存存储，进程退出后数据丢失                 | M1-T07                                         |
+| 尚无完整 CLI CRUD、重复名称规则和更新/删除能力      | M1-T07                                         |
+| 尚未完成 M1 综合调试与 Git 验收              | M1-T08                                         |
+| 尚未提供仓库级裸 `except` / 宽泛 `except Exception` 扫描结果 | M1-T08                                         |
 
-这些限制均不影响 M1-T04 已完成的验收结论。不要在 M1-T05 中提前实现异常、JSON 持久化、FastAPI 或数据库。
 
-## 下一步：M1-T05
 
-下一任务聚焦“模块、包与 Import 排错”，不增加业务功能。应基于现有多文件结构完成以下学习与验收：
+这些限制均不影响 M1-T06 已完成的验收结论。不要在 M1-T07 中提前实现 FastAPI 或数据库。
 
-- 解释 module、package、`__init__.py` 和项目根目录；
-- 解释 `from app...` 绝对导入如何解析；
-- 观察不同启动目录或启动方式对导入的影响；
-- 能定位 `ModuleNotFoundError`；
-- 识别循环导入的形成原因和基础排查方法。
+## 下一步：M1-T07
+
+下一任务聚焦“JSON 持久化项目管理器”。
+
+- 保留 InMemoryProjectStorage 的内存语义；
+- 新增独立 JsonProjectStorage，不要把已有内存类直接改成文件存储；
+- 实现 Project 创建、查询、修改、删除；
+- 完成 dataclass ↔ JSON 可序列化数据的转换；
+- 处理文件不存在、空文件、非法 JSON 等持久化边界；
+- 明确哪些异常属于文件系统/数据格式问题，哪些需要转换成业务异常；
+- 补充 JSON 持久化与 CRUD 回归测试。
 
 ## 摘要维护规则
 

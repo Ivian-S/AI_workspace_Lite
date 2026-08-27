@@ -2,6 +2,8 @@
 
 from app.models import Project
 from app.storage import InMemoryProjectStorage
+from app.exceptions import ProjectNotFoundError
+
 
 class ProjectService:
     def __init__(
@@ -29,8 +31,11 @@ class ProjectService:
     def list_projects(self) -> list[Project]:
         return self._storage.list_all()
 
-    def get_project(self, name: str) -> Project | None:
-        return self._storage.get_by_name(name)
+    def get_project(self, name: str) -> Project:
+        project = self._storage.get_by_name(name)
+        if project is None:
+            raise ProjectNotFoundError(name)
+        return project
 
 # ProjectService
 #     │
