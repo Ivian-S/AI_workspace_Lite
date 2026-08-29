@@ -127,3 +127,47 @@ def test_cli_delete_project(
 
     assert exit_code == 0
     assert storage.get_by_name("demo") is None
+
+
+def test_cli_create_duplicate_project_returns_error(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    file_path = tmp_path / "projects.json"
+
+    first_exit_code = main(
+        ["create", "demo"],
+        storage_path=file_path,
+    )
+
+    second_exit_code = main(
+        ["create", "demo"],
+        storage_path=file_path,
+    )
+
+    output = capsys.readouterr().out
+
+    assert first_exit_code == 0
+    assert second_exit_code == 1
+    assert "Project already exists: demo" in output
+
+
+def test_cli_list_invalid_json_returns_storage_error(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    file_path = tmp_path / "projects.json"
+    file_path.write_text(
+        "{invalid json",
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        ["list"],
+        storage_path=file_path,
+    )
+
+    output = capsys.readouterr().out
+
+    assert exit_code == 1
+    assert "Invalid project storage data" in output
