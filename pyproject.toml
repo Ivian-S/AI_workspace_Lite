@@ -1,4 +1,4 @@
-# 新增：/project/pyproject.toml
+# 修改：/project/pyproject.toml
 
 [build-system]
 requires = ["setuptools"]
@@ -9,7 +9,13 @@ name = "ai-workspace-lite"
 version = "0.1.0"
 description = "A lightweight AI workspace backend learning project."
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi>=0.139,<0.140",
+    "uvicorn[standard]>=0.41,<0.42",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [project.optional-dependencies]
 dev = [

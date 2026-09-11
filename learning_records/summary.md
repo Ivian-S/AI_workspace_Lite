@@ -1,17 +1,17 @@
 # AI Workspace Lite｜项目进度摘要
 
-> 最后更新：2026-09-04
+> 最后更新：2026-09-11
 >
 > 当前阶段：M2 进行中｜HTTP 与 FastAPI 后端基础
 >
-> 正式进度：M1 已完成；M2-T01 已完成；下一任务 M2-T02
+> 正式进度：M1 已完成；M2-T01、M2-T02 已完成；下一任务 M2-T03
 
 ## 里程碑进度
 
 | 里程碑 | 状态 | 完成日期 | 结果 |
 | --- | --- | --- | --- |
 | M1 Python 工程化地基 | 已完成 | 2026-08-29 | 多文件工程、分层、异常、JSON CRUD、CLI、pytest、Debugger、Git 基线 |
-| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01 已完成；下一任务 M2-T02 |
+| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01、M2-T02 已完成；下一任务 M2-T03 |
 | M3 PostgreSQL、ORM、项目分层与权限 | 待开始 | — | — |
 | M4 Linux 服务排错与 Docker 化 | 待开始 | — | — |
 | M5 大模型服务集成 | 待开始 | — | — |
@@ -42,17 +42,17 @@ M1.md
 当前进度：
 
 ```text
-M2-T01  HTTP 请求/响应与 REST       ✅ 已完成
-M2-T02  FastAPI 最小应用与启动流程  → 下一任务
+M2-T01  HTTP 请求/响应与 REST         ✅ 已完成
+M2-T02  FastAPI 最小应用与启动流程    ✅ 已完成
+M2-T03  路径参数与查询参数             → 下一任务
 ```
 
 已生成记录：
 
 ```text
 M2-T01.md
+M2-T02.md
 ```
-
-M2-T01 没有修改 `/project` 源码或依赖，只完成 HTTP / REST 基础认知与无 AI 验收。
 
 ## 当前项目能力
 
@@ -88,6 +88,22 @@ M2-T01 已建立：
 - 能解释 Router 负责协议翻译、Service 负责业务规则。
 - 已识别当前完整替换 `update_project()` 与未来 `PATCH` 部分更新之间的语义差异。
 
+M2-T02 已建立：
+
+- 已正式引入 FastAPI 与 Uvicorn。
+- 能区分 Uvicorn ASGI Server 与 FastAPI Web Framework 的职责。
+- 能解释 `app.main:app` 中 package、module 与 application attribute 的含义。
+- 能解释 Uvicorn import `app.main` 时为什么不会执行 CLI `main()`。
+- 已建立最小 FastAPI application instance 和 GET route。
+- 能解释 route decorator 在模块导入阶段完成路由注册。
+- 能区分 `/openapi.json` 与 `/docs`。
+- 能解释 Swagger UI 使用 OpenAPI Schema 展示接口。
+- 能画出当前真实请求链：
+  `Client → Uvicorn → FastAPI → Route → read_root() → HTTP Response → Client`。
+- 能说明当前最小 HTTP 路由尚未调用 `ProjectService` / `JsonProjectStorage`。
+- 能区分 module import 失败和 module 内 application attribute 查找失败。
+- 已通过临时修改 `/` → `/hello` 观察 FastAPI 路由匹配与 404 行为。
+
 ## 当前调用关系
 
 ```text
@@ -117,20 +133,20 @@ CLI     → 参数解析、应用组装、用户输出与退出码
 
 ## 最新验证基线
 
-2026-08-29：
+2026-09-11，M2-T02：
 
 ```bash
 pytest --collect-only -q
-# 40 tests collected in 0.51s
+# 42 tests collected in 1.44s
 
-pytest tests/test_cli.py -v
-# 7 passed in 0.57s
+pytest tests/test_web_smoke.py -v
+# 2 passed in 0.28s
 
 pytest -q
-# 40 passed in 0.10s
-```
+# 42 passed in 0.34s
+````
 
-测试构成：
+当前测试构成：
 
 ```text
 test_smoke.py           2
@@ -138,13 +154,12 @@ test_project_state.py  11
 test_services.py       13
 test_json_storage.py    7
 test_cli.py             7
+test_web_smoke.py       2
 -------------------------
-Total                  40
+Total                  42
 ```
 
-M1-T08 的 Debugger、主动 Bug 定位、except 扫描和 Git 验收由用户确认均已完成并通过；未提供完整输出的项目不虚构具体日志或 commit hash。
-
-M2-T01 未修改源码、依赖或测试，因此没有产生新的 pytest 运行结果；上面的 40 tests 仍是最近一次已记录的代码验证基线。
+M2-T02 已验证 FastAPI application 可以被正常导入，且最小 GET `/` 路由进入 OpenAPI Schema。
 
 ## 当前设计结论
 
@@ -167,6 +182,13 @@ M2-T01 未修改源码、依赖或测试，因此没有产生新的 pytest 运�
 - HTTP Status Code 不与 CLI exit code 机械一一映射。
 - 当前 Project 没有 `id`，M2-T01 不虚构 `project.id`。
 - 当前 Update 是完整替换语义，未来 `PATCH` 部分更新需要后续正式演进。
+- Uvicorn 是 ASGI Server；FastAPI 是 Web Framework，两者职责不同。
+- `app.main:app` 表示 `package.module:attribute`，最后的 `app` 是 FastAPI application instance。
+- Uvicorn 通过 import 加载 `app.main` 时，模块的 `__name__` 为 `app.main`，不会触发原 CLI 的 `if __name__ == "__main__"`。
+- FastAPI 路由由 Method + Path 共同决定。
+- `/openapi.json` 是机器可读的 OpenAPI Schema；`/docs` 是基于 Schema 的 Swagger UI。
+- 当前最小 HTTP 请求只经过 FastAPI route，不提前虚构 Service / Storage 调用。
+- 当前阶段继续保留 CLI 与 Web application 的过渡共存，不为单一路由提前拆分 Router 目录。
 
 ## M1 已完成能力边界
 
@@ -199,24 +221,24 @@ LLM API
 Agent
 ```
 
-## 下一步：M2-T02
+## 下一步：M2-T03
 
 ```text
-M2-T02｜FastAPI 最小应用与启动流程
-```
+M2-T03｜路径参数与查询参数
+````
 
-M2-T01 已完成 HTTP 请求/响应与 REST 基础。
+M2-T02 已完成最小 FastAPI application、Uvicorn 启动流程、路由注册以及 OpenAPI / Swagger 基础。
 
-下一任务开始把已经建立的心智模型落到真实 `/project`：
+下一任务开始让数据通过 URL 进入 Python 函数：
 
 ```text
 Client
-→ HTTP Request
-→ FastAPI
-→ Router
-→ Service
-→ Storage
-→ HTTP Response
+→ URL Path / Query String
+→ FastAPI 参数解析
+→ Python function parameters
+→ Response
 ```
 
-M2-T02 只引入最小 FastAPI 应用、启动流程和 OpenAPI / Swagger 认知；继续坚持增量修改，不提前完成 Projects CRUD、Pydantic 校验或数据库内容。
+M2-T03 仍只学习 Path / Query 参数及类型转换，不提前实现 Pydantic Request Body、完整 Projects CRUD 或数据库内容。
+
+```

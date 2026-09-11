@@ -3,6 +3,8 @@
 import argparse
 from pathlib import Path
 
+from fastapi import FastAPI
+
 from app import APP_NAME
 from app.exceptions import(
     ProjectNotFoundError,
@@ -16,6 +18,22 @@ from app.services import ProjectService
 from app.storage import JsonProjectStorage
 
 DEFAULT_STORAGE_PATH = Path("data/projects.json")
+
+# 新增：FastAPI application instance
+
+app = FastAPI(
+    title=APP_NAME,
+    version=APP_VERSION,
+)
+
+# 新增：M2-T02 只验证最小 HTTP 路由
+@app.get("/")
+def read_root() -> dict[str, str]:
+    return {
+        "name": APP_NAME,
+        "version": APP_VERSION,
+        "status": "ok",
+    }
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
