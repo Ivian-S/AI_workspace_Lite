@@ -35,6 +35,21 @@ def read_root() -> dict[str, str]:
         "status": "ok",
     }
 
+# 新增：M2-T03 Path / Query 参数学习路由
+@app.get("/parameter-demo/{project_name}")
+def read_parameter_demo(
+    project_name: str,
+    limit: int = 10,
+    include_archived: bool = False,
+    offset: int = 0,
+)-> dict[str, str | int | bool | int]:
+    return {
+        "project_name": project_name,
+        "limit": limit,
+        "include_archived": include_archived,
+        "offset": offset,
+    }
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="AI-Workspace-Lite",
