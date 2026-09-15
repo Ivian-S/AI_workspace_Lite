@@ -1,17 +1,17 @@
 # AI Workspace Lite｜项目进度摘要
 
-> 最后更新：2026-09-11
+> 最后更新：2026-09-15
 >
 > 当前阶段：M2 进行中｜HTTP 与 FastAPI 后端基础
 >
-> 正式进度：M1 已完成；M2-T01、M2-T02、M2-T03 已完成；下一任务 M2-T04
+> 正式进度：M1 已完成；M2-T01、M2-T02、M2-T03 已完成；M2-T04 代码与 HTTP 验证已通过，待补 2 项无 AI 验收；下一任务仍为 M2-T04 收口
 
 ## 里程碑进度
 
 | 里程碑 | 状态 | 完成日期 | 结果 |
 | --- | --- | --- | --- |
 | M1 Python 工程化地基 | 已完成 | 2026-08-29 | 多文件工程、分层、异常、JSON CRUD、CLI、pytest、Debugger、Git 基线 |
-| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01、M2-T02、M2-T03 已完成；下一任务 M2-T04 |
+| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01、M2-T02、M2-T03 已完成；M2-T04 代码与 HTTP 验证已通过，待补 2 项无 AI 验收 |
 | M3 PostgreSQL、ORM、项目分层与权限 | 待开始 | — | — |
 | M4 Linux 服务排错与 Docker 化 | 待开始 | — | — |
 | M5 大模型服务集成 | 待开始 | — | — |
@@ -45,7 +45,7 @@ M1.md
 M2-T01  HTTP 请求/响应与 REST         ✅ 已完成
 M2-T02  FastAPI 最小应用与启动流程    ✅ 已完成
 M2-T03  路径参数与查询参数             ✅ 已完成
-M2-T04  Pydantic 请求体与校验          → 下一任务
+M2-T04  Pydantic 请求体与校验          🟡 待补 2 项无 AI 验收
 ```
 
 已生成记录：
@@ -54,6 +54,7 @@ M2-T04  Pydantic 请求体与校验          → 下一任务
 M2-T01.md
 M2-T02.md
 M2-T03.md
+M2-T04.md
 ```
 
 M2-T01 完成 HTTP Request / Response 与 REST 基础认知，没有修改源码。
@@ -61,6 +62,8 @@ M2-T01 完成 HTTP Request / Response 与 REST 基础认知，没有修改源码
 M2-T02 正式引入 FastAPI 与 Uvicorn，在保留原 CLI 入口的基础上增加最小 FastAPI application、GET `/` 路由以及 OpenAPI / Swagger 基础。
 
 M2-T03 增加 Path Parameter、Query Parameter 和参数类型转换学习路由，验证默认 Query 参数、显式 Query 参数、`int` / `bool` 类型解析以及非法参数在 endpoint 调用前被拒绝的行为。
+
+M2-T04 已在本地增加 Pydantic Request Schema 和 `POST /request-body-demo` 学习路由，验证 required 字段、`Field(min_length=1)`、`list[str]` 类型校验、默认字段以及 FastAPI 自动 422；自动测试与 HTTP 验证已通过，但无 AI 验收第 3、4 项尚未提交，因此尚未正式收口。
 
 ## 当前项目能力
 
@@ -86,8 +89,12 @@ M2-T03 增加 Path Parameter、Query Parameter 和参数类型转换学习路由
 - 能处理 Path Parameter 和带默认值的 Query Parameter。
 - FastAPI 能依据 Python 类型注解将请求参数解析为 `int` / `bool` 等 Python 类型。
 - 非法 Query 参数会在 endpoint 正常执行前被 FastAPI 拒绝。
+- 已建立 `POST /request-body-demo` Request Body 学习路由。
+- 已使用 Pydantic `BaseModel` 定义 `ProjectRequestBody` Request Schema。
+- `name` 使用 `Field(min_length=1)`；`description` 使用 `str | None = None`；`tags / members` 使用 `default_factory=list`。
+- 能观察缺少 required 字段、字段类型错误和字段约束失败产生的 HTTP 422。
 - 当前 HTTP 学习路由尚未接入 `ProjectService` / `JsonProjectStorage`。
-- 已使用 OpenAPI smoke test 验证 Web 路由和参数声明。
+- 已使用 OpenAPI smoke test 验证 Web 路由、参数声明和 Request Body Schema。
 
 ## 当前 M2 学习能力
 
@@ -136,6 +143,22 @@ M2-T03 已建立：
   `Client → Uvicorn → FastAPI → 路由匹配 → 参数提取 → 类型转换/校验 → endpoint → Response`。
 - 已独立增加 `offset: int = 0` Query Parameter，并验证默认值和显式传参。
 
+M2-T04 当前已建立（代码 / HTTP 部分）：
+
+- 能说明 JSON Request Body 与 Path / Query Parameter 的来源差异。
+- 能使用 Pydantic `BaseModel` 定义 HTTP Request Schema。
+- 能使用 `Field(min_length=1)` 添加基础字段约束。
+- 能说明 `description: str | None = None` 同时表示允许 `None` 且允许字段缺失。
+- 已理解“允许 `None`”与“允许字段缺失”不是同一概念；对应的无 AI required 实验尚待补交。
+- 能说明 `tags: list[str]` 为什么拒绝字符串输入。
+- 能解释 FastAPI / Pydantic 在 endpoint 正常执行前完成 Request Body 解析和校验。
+- 已实际观察缺少 `name`、`tags` 类型错误、`name` 长度不足产生 HTTP 422。
+- 能从错误响应读取 `loc: body / <field>` 与错误类型。
+- 能画出：
+  `Client → Uvicorn → FastAPI → JSON Body → Pydantic Request Schema → Python object → endpoint / 422`。
+- 已通过 OpenAPI smoke test 验证 Request Body Schema。
+- `priority: int = 0` 的独立三场景实验尚待补交。
+
 ## 当前调用关系
 
 ### CLI 调用链
@@ -156,30 +179,35 @@ JsonProjectStorage
 data/projects.json
 ```
 
-### 当前 Web 参数学习调用链
+### 当前 Web HTTP 边界学习调用链
+
+Path / Query 学习路由：
 
 ```text
 Client
-  │
-  ▼
-Uvicorn
-  │
-  ▼
-FastAPI
-  │
-  ├── 路由匹配
-  ├── Path / Query 参数提取
-  ├── 类型解析
-  └── 参数校验
-  │
-  ▼
-read_parameter_demo(...)
-  │
-  ▼
-HTTP JSON Response
+→ Uvicorn
+→ FastAPI
+→ 路由匹配
+→ Path / Query 参数提取
+→ 类型解析与校验
+→ read_parameter_demo(...)
+→ HTTP JSON Response
 ```
 
-当前该调用链尚未进入：
+Request Body 学习路由：
+
+```text
+Client
+→ Uvicorn
+→ FastAPI
+→ 路由匹配
+→ 读取 / 解析 JSON Request Body
+→ Pydantic ProjectRequestBody
+   ├─ 校验成功 → Python object → read_request_body_demo(...) → 200 JSON Response
+   └─ 校验失败 → RequestValidationError → FastAPI 默认异常处理 → 422
+```
+
+当前这些调用链尚未进入：
 
 ```text
 ProjectService
@@ -187,7 +215,7 @@ ProjectService
 → data/projects.json
 ```
 
-因此当前参数学习接口仍属于 HTTP 边界学习，不代表 Projects 业务 API 已经完成。
+因此当前参数与 Request Body 学习接口仍属于 HTTP 边界学习，不代表 Projects 业务 API 已经完成。
 
 职责：
 
@@ -202,17 +230,17 @@ FastAPI   → HTTP 路由、参数处理、响应以及 OpenAPI
 
 ## 最新验证基线
 
-2026-09-11，M2-T03：
+2026-09-15，M2-T04 本地验证：
 
 ```bash
 pytest --collect-only -q
-# 43 tests collected in 0.18s
+# 44 tests collected in 1.18s
 
 pytest tests/test_web_smoke.py -v
-# 3 passed in 0.22s
+# 4 passed in 0.27s
 
 pytest -q
-# 43 passed in 0.34s
+# 44 passed in 0.31s
 ```
 
 当前测试构成：
@@ -223,9 +251,9 @@ test_project_state.py   11
 test_services.py        13
 test_json_storage.py     7
 test_cli.py              7
-test_web_smoke.py        3
+test_web_smoke.py        4
 --------------------------
-Total                   43
+Total                   44
 ```
 
 Web smoke tests：
@@ -234,6 +262,7 @@ Web smoke tests：
 test_fastapi_app_exists
 test_root_route_is_in_openapi_schema
 test_parameter_demo_is_in_openapi_schema
+test_request_body_demo_is_in_openapi_schema
 ```
 
 M2-T03 实际 HTTP 验证：
@@ -263,11 +292,43 @@ GET /parameter-demo/alpha?limit=abc
 → error type: int_parsing
 ```
 
-当前正式代码验证基线：
+M2-T04 实际 HTTP 验证：
 
 ```text
-43 tests collected
-43 tests passed
+POST /request-body-demo
+合法 JSON Body
+→ 200 OK
+```
+
+```text
+缺少 name
+→ 422 Unprocessable Content
+→ error location: body / name
+→ error type: missing
+```
+
+```text
+tags = "python"
+→ 422 Unprocessable Content
+→ error location: body / tags
+→ error type: list_type
+```
+
+```text
+name = ""
+→ 422 Unprocessable Content
+→ error location: body / name
+→ error type: string_too_short
+→ min_length = 1
+```
+
+说明：本次终端记录的前三段 curl 响应正文存在下一条 `curl -i \` 命令覆盖部分字符的采集污染；HTTP Status、错误位置/类型、最后一段完整错误响应以及自动测试仍可作为可靠验收依据。正式记录不把被覆盖的字符串当作真实 API 返回值。
+
+当前正式本地代码验证基线：
+
+```text
+44 tests collected
+44 tests passed
 ```
 
 ## 当前设计结论
@@ -305,6 +366,12 @@ GET /parameter-demo/alpha?limit=abc
 - FastAPI 在调用 endpoint 前完成参数解析和校验。
 - 参数解析失败时 endpoint 不正常执行，由 FastAPI 在 HTTP 边界返回错误响应。
 - 当前参数学习 route 不接入 Project 业务层，不提前实现 Projects CRUD。
+- Pydantic Request Schema 属于 HTTP 输入边界，不等同于现有 `Project` dataclass。
+- Request Body 在进入 endpoint 前由 FastAPI / Pydantic 完成解析、类型转换和字段校验。
+- 请求体验证失败时由 FastAPI 默认异常处理形成 422，endpoint 不按正常路径执行。
+- `str | None` 表示值允许为 `None`；字段是否允许缺失还取决于是否存在默认值。
+- 类型正确不代表字段一定合法，`Field(min_length=1)` 等约束会继续参与校验。
+
 
 ## M1 已完成能力边界
 
@@ -337,45 +404,10 @@ LLM API
 Agent
 ```
 
-## 下一步：M2-T04
+进入：
 
 ```text
-M2-T04｜Pydantic 请求体与校验
+M2-T05｜Projects CRUD API
 ```
 
-M2-T03 已完成 URL 参数进入 Python endpoint 的基础流程：
-
-```text
-Client
-→ URL Path / Query String
-→ FastAPI 路由匹配
-→ 参数提取
-→ 类型解析与校验
-→ Python function parameters
-→ HTTP Response
-```
-
-下一任务开始进入 HTTP Request Body：
-
-```text
-Client
-→ JSON Request Body
-→ FastAPI
-→ Pydantic Request Schema
-→ 数据解析与校验
-→ Python object
-→ endpoint
-```
-
-M2-T04 重点：
-
-```text
-Request Body
-Pydantic BaseModel
-Request Schema
-字段类型
-请求体验证
-422 的来源
-```
-
-继续保持任务边界，不提前实现完整 Projects CRUD、数据库或完整 FastAPI 接口测试。
+M2-T05 才开始把 HTTP 路由真正接入现有 `ProjectService`；继续遵守当前模型事实，不提前虚构不存在的业务字段或数据库层。

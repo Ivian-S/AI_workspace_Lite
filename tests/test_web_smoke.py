@@ -37,3 +37,47 @@ def test_parameter_demo_is_in_openapi_schema() -> None:
     assert parameters["offset"]["in"] == "query"
     assert parameters["offset"]["schema"]["type"] == "integer"
     assert parameters["offset"]["schema"]["default"] == 0
+
+# 新增：确认 FastAPI 正确识别 Pydantic Request Body
+def test_request_body_demo_is_in_openapi_schema() -> None:
+    openapi_schema = app.openapi()
+
+    operation = openapi_schema["paths"][
+        "/request-body-demo"
+    ]["post"]
+
+    request_body = operation["requestBody"]
+
+    assert request_body["required"] is True
+
+    body_ref = request_body[
+        "content"
+    ]["application/json"]["schema"]["$ref"]
+
+    schema_name = body_ref.rsplit("/", 1)[-1]
+
+    body_schema = openapi_schema[
+        "components"
+    ]["schemas"][schema_name]
+
+    assert "name" in body_schema["required"]
+
+    assert (
+        body_schema["properties"]["name"]["type"]
+        == "string"
+    )
+
+    assert (
+        body_schema["properties"]["name"]["minLength"]
+        == 1
+    )
+
+    assert (
+        body_schema["properties"]["tags"]["type"]
+        == "array"
+    )
+
+    assert (
+        body_schema["properties"]["members"]["type"]
+        == "array"
+    )

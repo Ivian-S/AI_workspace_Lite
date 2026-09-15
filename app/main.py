@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from fastapi import FastAPI
+from pydantic import BaseModel, Field
 
 from app import APP_NAME
 from app.exceptions import(
@@ -19,8 +20,15 @@ from app.storage import JsonProjectStorage
 
 DEFAULT_STORAGE_PATH = Path("data/projects.json")
 
-# 新增：FastAPI application instance
+#新增：Request Body Schema
+class ProjectRequestBody(BaseModel):
+    name: str = Field(min_length=1)
+    description: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    members: list[str] = Field(default_factory=list)
 
+
+# 新增：FastAPI application instance
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
@@ -49,6 +57,14 @@ def read_parameter_demo(
         "include_archived": include_archived,
         "offset": offset,
     }
+
+# 新增：M2-T04 Request Body 参数学习路由
+@app.post("/request-body-demo")
+def read_request_body_demo(
+    project: ProjectRequestBody,
+) -> dict[str, object]:
+    return project.model_dump()
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
