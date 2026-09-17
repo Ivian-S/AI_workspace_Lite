@@ -81,3 +81,37 @@ def test_request_body_demo_is_in_openapi_schema() -> None:
         body_schema["properties"]["members"]["type"]
         == "array"
     )
+
+
+def test_project_crud_routes_are_in_openapi_schema() -> None:
+    openapi_schema = app.openapi()
+
+    collection = openapi_schema["paths"][
+        "/projects"
+    ]
+
+    detail = openapi_schema["paths"][
+        "/projects/{project_name}"
+    ]
+
+    assert "post" in collection
+    assert "get" in collection
+
+    assert "get" in detail
+    assert "patch" in detail
+    assert "delete" in detail
+
+    assert (
+        "201"
+        in collection["post"]["responses"]
+    )
+
+    assert (
+        "requestBody"
+        in detail["patch"]
+    )
+
+    assert (
+        "204"
+        in detail["delete"]["responses"]
+    )

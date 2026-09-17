@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI,status
 from pydantic import BaseModel, Field
 
 from app import APP_NAME
@@ -28,11 +28,142 @@ class ProjectRequestBody(BaseModel):
     members: list[str] = Field(default_factory=list)
 
 
+class ProjectUpdateRequest(BaseModel):
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+    )
+    description: str | None = None
+    tags: list[str] | None = None
+    members: list[str] | None = None
+
+class ProjectResponse(BaseModel):
+    name: str
+    description: str | None = None
+    tags: list[str]
+    members: list[str]
+
 # 新增：FastAPI application instance
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
 )
+
+web_project_service = ProjectService(
+    storage=JsonProjectStorage(DEFAULT_STORAGE_PATH),
+)
+
+def project_to_response(project: Project) -> ProjectResponse:
+    return ProjectResponse(
+        name=project.name,
+        description=project.description,
+        tags=list(project.tags),
+        members=list(project.members),
+    )
+
+@app.post(
+        "/projects",
+        response_model=ProjectResponse,
+        status_code=status.HTTP_201_CREATED,
+)
+def create_project_api(
+    body: ProjectRequestBody,
+) -> ProjectResponse:
+    project = web_project_service.create_project(
+        name=body.name,
+        description=body.description,
+        tags=body.tags,
+        members=body.members,
+    )
+    return project_to_response(project)
+
+@app.get(
+        "/projects",
+        response_model=list[ProjectResponse],
+)
+def list_projects_api() -> list[ProjectResponse]:
+    projects = web_project_service.list_projects()
+    return [project_to_response(project) for project in projects]
+
+
+@app.get(
+        "/projects/{project_name}",
+        response_model=ProjectResponse,
+)
+def get_project_api(
+    project_name: str,
+) -> ProjectResponse:
+    project = web_project_service.get_project(project_name)
+    return project_to_response(project)
+
+
+@app.patch(
+    "/projects/{project_name}",
+    response_model=ProjectResponse,
+)
+def update_project_api(
+    project_name: str,
+    body: ProjectUpdateRequest,
+) -> ProjectResponse:
+    current_project = (
+        web_project_service.get_project(
+            project_name
+        )
+    )
+
+    updates = body.model_dump(
+        exclude_unset=True
+    )
+
+    new_name = (
+        current_project.name
+        if body.name is None
+        else body.name
+    )
+
+    new_description = (
+        current_project.description
+        if "description" not in updates
+        else body.description
+    )
+
+    new_tags = (
+        current_project.tags
+        if body.tags is None
+        else body.tags
+    )
+
+    new_members = (
+        current_project.members
+        if body.members is None
+        else body.members
+    )
+
+    updated_project = (
+        web_project_service.update_project(
+            project_name,
+            name=new_name,
+            description=new_description,
+            tags=new_tags,
+            members=new_members,
+        )
+    )
+
+    return project_to_response(
+        updated_project
+    )
+
+@app.delete(
+    "/projects/{project_name}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_project_api(
+    project_name: str,
+) -> None:
+    web_project_service.delete_project(
+        project_name
+    )
+
 
 # 新增：M2-T02 只验证最小 HTTP 路由
 @app.get("/")

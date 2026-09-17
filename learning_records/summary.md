@@ -1,17 +1,17 @@
 # AI Workspace Lite｜项目进度摘要
 
-> 最后更新：2026-09-15
+> 最后更新：2026-09-17
 >
 > 当前阶段：M2 进行中｜HTTP 与 FastAPI 后端基础
 >
-> 正式进度：M1 已完成；M2-T01、M2-T02、M2-T03 已完成；M2-T04 代码与 HTTP 验证已通过，待补 2 项无 AI 验收；下一任务仍为 M2-T04 收口
+> 正式进度：M1 已完成；M2-T01、M2-T02、M2-T03、M2-T04、M2-T05 已完成；下一任务 M2-T06
 
 ## 里程碑进度
 
 | 里程碑 | 状态 | 完成日期 | 结果 |
 | --- | --- | --- | --- |
 | M1 Python 工程化地基 | 已完成 | 2026-08-29 | 多文件工程、分层、异常、JSON CRUD、CLI、pytest、Debugger、Git 基线 |
-| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01、M2-T02、M2-T03 已完成；M2-T04 代码与 HTTP 验证已通过，待补 2 项无 AI 验收 |
+| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01 ～ M2-T05 已完成；下一任务 M2-T06 |
 | M3 PostgreSQL、ORM、项目分层与权限 | 待开始 | — | — |
 | M4 Linux 服务排错与 Docker 化 | 待开始 | — | — |
 | M5 大模型服务集成 | 待开始 | — | — |
@@ -45,7 +45,9 @@ M1.md
 M2-T01  HTTP 请求/响应与 REST         ✅ 已完成
 M2-T02  FastAPI 最小应用与启动流程    ✅ 已完成
 M2-T03  路径参数与查询参数             ✅ 已完成
-M2-T04  Pydantic 请求体与校验          🟡 待补 2 项无 AI 验收
+M2-T04  Pydantic 请求体与校验          ✅ 已完成
+M2-T05  Projects CRUD API              ✅ 已完成
+M2-T06  404、重复数据与统一异常         → 下一任务
 ```
 
 已生成记录：
@@ -55,6 +57,7 @@ M2-T01.md
 M2-T02.md
 M2-T03.md
 M2-T04.md
+M2-T05.md
 ```
 
 M2-T01 完成 HTTP Request / Response 与 REST 基础认知，没有修改源码。
@@ -63,7 +66,9 @@ M2-T02 正式引入 FastAPI 与 Uvicorn，在保留原 CLI 入口的基础上增
 
 M2-T03 增加 Path Parameter、Query Parameter 和参数类型转换学习路由，验证默认 Query 参数、显式 Query 参数、`int` / `bool` 类型解析以及非法参数在 endpoint 调用前被拒绝的行为。
 
-M2-T04 已在本地增加 Pydantic Request Schema 和 `POST /request-body-demo` 学习路由，验证 required 字段、`Field(min_length=1)`、`list[str]` 类型校验、默认字段以及 FastAPI 自动 422；自动测试与 HTTP 验证已通过，但无 AI 验收第 3、4 项尚未提交，因此尚未正式收口。
+M2-T04 增加 Pydantic Request Schema 和 `POST /request-body-demo` 学习路由，建立 JSON Request Body、required / optional、字段类型、字段约束以及 FastAPI 自动 422 的基础认知。
+
+M2-T05 把 FastAPI Web 路由正式接入现有 `ProjectService` 和 `JsonProjectStorage`，实现 Projects HTTP CRUD。PATCH 由 Router 负责把部分更新请求合并成完整数据，再复用现有完整替换 `ProjectService.update_project()`。
 
 ## 当前项目能力
 
@@ -84,17 +89,29 @@ M2-T04 已在本地增加 Pydantic Request Schema 和 `POST /request-body-demo` 
 - Git 基线验收完成。
 - 已引入 FastAPI application，同时保留原 CLI 入口。
 - 已使用 Uvicorn 作为 ASGI Server 启动 FastAPI application。
-- 当前 Web application 已拥有最小 GET `/` 路由。
+- Web application 拥有 GET `/` 路由。
 - 已建立 `/parameter-demo/{project_name}` 参数学习路由。
 - 能处理 Path Parameter 和带默认值的 Query Parameter。
 - FastAPI 能依据 Python 类型注解将请求参数解析为 `int` / `bool` 等 Python 类型。
 - 非法 Query 参数会在 endpoint 正常执行前被 FastAPI 拒绝。
 - 已建立 `POST /request-body-demo` Request Body 学习路由。
-- 已使用 Pydantic `BaseModel` 定义 `ProjectRequestBody` Request Schema。
-- `name` 使用 `Field(min_length=1)`；`description` 使用 `str | None = None`；`tags / members` 使用 `default_factory=list`。
-- 能观察缺少 required 字段、字段类型错误和字段约束失败产生的 HTTP 422。
-- 当前 HTTP 学习路由尚未接入 `ProjectService` / `JsonProjectStorage`。
-- 已使用 OpenAPI smoke test 验证 Web 路由、参数声明和 Request Body Schema。
+- 已使用 Pydantic `BaseModel` 定义 Request Schema。
+- 能处理 required 字段、可省略字段、`list[str]` 等字段类型和基础 `Field` 约束。
+- 非法 Request Body 会在 endpoint 正常执行前由 FastAPI / Pydantic 拒绝并返回 422。
+- 已通过 OpenAPI smoke tests 验证 Path / Query / Request Body 声明。
+- 已实现 Projects HTTP CRUD：
+  - `POST /projects`
+  - `GET /projects`
+  - `GET /projects/{project_name}`
+  - `PATCH /projects/{project_name}`
+  - `DELETE /projects/{project_name}`
+- Web Projects API 已正式调用 `ProjectService`。
+- Web Projects API 通过 `JsonProjectStorage` 使用现有 JSON 持久化。
+- 创建 Project 返回 HTTP 201。
+- 删除成功返回 HTTP 204。
+- PATCH 能只更新客户端实际发送的字段并保留其他字段。
+- 当前 `Project` 仍没有数据库 `id`，HTTP 资源继续以 `project_name` 标识。
+- 404 / 重复数据等业务异常尚未统一翻译为 HTTP 响应；该部分进入 M2-T06。
 
 ## 当前 M2 学习能力
 
@@ -123,9 +140,9 @@ M2-T02 已建立：
 - 能解释 Swagger UI 使用 OpenAPI Schema 展示接口。
 - 能画出当前真实请求链：
   `Client → Uvicorn → FastAPI → Route → read_root() → HTTP Response → Client`。
-- 能说明当前最小 HTTP 路由尚未调用 `ProjectService` / `JsonProjectStorage`。
+- 能说明最小 HTTP 路由不需要虚构 Service / Storage 调用。
 - 能区分 module import 失败和 module 内 application attribute 查找失败。
-- 已通过临时修改 `/` → `/hello` 观察 FastAPI 路由匹配与 404 行为。
+- 已通过临时修改 route 观察 FastAPI 路由匹配与 404 行为。
 
 M2-T03 已建立：
 
@@ -143,21 +160,36 @@ M2-T03 已建立：
   `Client → Uvicorn → FastAPI → 路由匹配 → 参数提取 → 类型转换/校验 → endpoint → Response`。
 - 已独立增加 `offset: int = 0` Query Parameter，并验证默认值和显式传参。
 
-M2-T04 当前已建立（代码 / HTTP 部分）：
+M2-T04 已建立：
 
-- 能说明 JSON Request Body 与 Path / Query Parameter 的来源差异。
+- 能区分 Path / Query 与 JSON Request Body 的数据来源。
 - 能使用 Pydantic `BaseModel` 定义 HTTP Request Schema。
-- 能使用 `Field(min_length=1)` 添加基础字段约束。
-- 能说明 `description: str | None = None` 同时表示允许 `None` 且允许字段缺失。
-- 已理解“允许 `None`”与“允许字段缺失”不是同一概念；对应的无 AI required 实验尚待补交。
-- 能说明 `tags: list[str]` 为什么拒绝字符串输入。
-- 能解释 FastAPI / Pydantic 在 endpoint 正常执行前完成 Request Body 解析和校验。
-- 已实际观察缺少 `name`、`tags` 类型错误、`name` 长度不足产生 HTTP 422。
+- 能使用 `Field` 添加基础字段约束。
+- 能说明 required 字段与默认值之间的关系。
+- 能区分“允许值为 None”和“允许字段缺失”。
+- 能说明 `list[str]` 等字段类型会参与请求校验。
+- 能解释 FastAPI / Pydantic 在 endpoint 正常执行前完成 Body 解析、转换和校验。
+- 已实际观察缺少 required 字段、字段类型错误、字段约束失败返回 HTTP 422。
 - 能从错误响应读取 `loc: body / <field>` 与错误类型。
 - 能画出：
   `Client → Uvicorn → FastAPI → JSON Body → Pydantic Request Schema → Python object → endpoint / 422`。
 - 已通过 OpenAPI smoke test 验证 Request Body Schema。
-- `priority: int = 0` 的独立三场景实验尚待补交。
+
+M2-T05 已建立：
+
+- 能把 FastAPI Route 接入已有 `ProjectService` 和 `JsonProjectStorage`。
+- 能说明 Web 与 CLI 应复用同一业务层，而不是复制业务规则。
+- 已实现 Project 的 Create / List / Get / Patch / Delete HTTP 接口。
+- 能说明创建成功使用 201、删除成功使用 204。
+- 能解释 `body.model_dump(exclude_unset=True)` 在 PATCH 中的作用。
+- 能区分 PATCH 中“字段未发送”与“显式发送 null”。
+- 能通过 Router 合并当前 Project 和局部更新，再调用现有完整替换 Service。
+- 能说明项目重名属于 Service 业务规则，不属于 Route 的重复实现。
+- 已独立验证只修改 `description` 时 `name / tags / members` 保持不变。
+- 已验证修改 `name` 后，可以使用新名称继续操作资源。
+- 已验证删除成功返回 204。
+- 能画出：
+  `Client → Uvicorn → FastAPI → Pydantic / Path → Route → Service → Storage → JSON → Response`。
 
 ## 当前调用关系
 
@@ -179,9 +211,7 @@ JsonProjectStorage
 data/projects.json
 ```
 
-### 当前 Web HTTP 边界学习调用链
-
-Path / Query 学习路由：
+### Web 参数学习调用链
 
 ```text
 Client
@@ -194,54 +224,100 @@ Client
 → HTTP JSON Response
 ```
 
-Request Body 学习路由：
+### Web Request Body 学习调用链
 
 ```text
 Client
 → Uvicorn
 → FastAPI
-→ 路由匹配
-→ 读取 / 解析 JSON Request Body
-→ Pydantic ProjectRequestBody
-   ├─ 校验成功 → Python object → read_request_body_demo(...) → 200 JSON Response
+→ 读取 / 解析 JSON Body
+→ Pydantic Request Schema
+   ├─ 校验成功 → Python object → endpoint → 200
    └─ 校验失败 → RequestValidationError → FastAPI 默认异常处理 → 422
 ```
 
-当前这些调用链尚未进入：
+### 当前 Projects Web API 调用链
 
 ```text
+Client
+  │
+  ▼
+Uvicorn
+  │
+  ▼
+FastAPI
+  │
+  ├── Method + Path 路由匹配
+  ├── Path / Request Body 提取
+  ├── Pydantic 解析与校验
+  │
+  ▼
+Projects Route
+  │
+  ▼
 ProjectService
-→ JsonProjectStorage
-→ data/projects.json
+  │
+  ▼
+JsonProjectStorage
+  │
+  ▼
+data/projects.json
+  │
+  ▼
+Project / list[Project]
+  │
+  ▼
+HTTP Response
 ```
 
-因此当前参数与 Request Body 学习接口仍属于 HTTP 边界学习，不代表 Projects 业务 API 已经完成。
+PATCH 的额外 Router 翻译：
+
+```text
+PATCH partial body
+→ exclude_unset=True
+→ 读取当前 Project
+→ 合并未修改字段
+→ 完整 update 数据
+→ ProjectService.update_project(...)
+```
 
 职责：
 
 ```text
-Model     → 数据
-Service   → 业务动作与规则
-Storage   → 数据存取
-CLI       → 参数解析、应用组装、用户输出与退出码
-Uvicorn   → ASGI Server，监听网络并运行 Web application
-FastAPI   → HTTP 路由、参数处理、响应以及 OpenAPI
+Model      → 领域数据
+Service    → 业务动作与规则
+Storage    → 数据存取
+CLI        → CLI 参数解析、应用组装、用户输出与退出码
+Uvicorn    → ASGI Server，监听网络并运行 Web application
+FastAPI    → HTTP 路由、参数/Body 处理、响应与 OpenAPI
+Web Route  → HTTP 协议翻译，并调用 Service
 ```
 
 ## 最新验证基线
 
-2026-09-15，M2-T04 本地验证：
+2026-09-17，M2-T05：
 
 ```bash
 pytest --collect-only -q
-# 44 tests collected in 1.18s
+# 45 tests collected in 2.38s
 
 pytest tests/test_web_smoke.py -v
-# 4 passed in 0.27s
-
-pytest -q
-# 44 passed in 0.31s
+# 5 passed in 0.31s
 ```
+
+本次验收材料未包含：
+
+```bash
+pytest -q
+```
+
+因此当前记录**不写成**：
+
+```text
+45 passed
+```
+
+也不虚构全量回归耗时。
 
 当前测试构成：
 
@@ -251,9 +327,9 @@ test_project_state.py   11
 test_services.py        13
 test_json_storage.py     7
 test_cli.py              7
-test_web_smoke.py        4
+test_web_smoke.py        5
 --------------------------
-Total                   44
+Total                   45 collected
 ```
 
 Web smoke tests：
@@ -263,73 +339,52 @@ test_fastapi_app_exists
 test_root_route_is_in_openapi_schema
 test_parameter_demo_is_in_openapi_schema
 test_request_body_demo_is_in_openapi_schema
+test_project_crud_routes_are_in_openapi_schema
 ```
 
-M2-T03 实际 HTTP 验证：
+M2-T05 实际 HTTP 验证：
 
 ```text
-GET /parameter-demo/alpha
-→ 200 OK
-→ project_name = "alpha"
-→ limit = 10
-→ include_archived = false
-→ offset = 0
+POST /projects
+→ 201 Created
 ```
 
 ```text
-GET /parameter-demo/alpha?limit=5&include_archived=true&offset=10
-→ 200 OK
-→ project_name = "alpha"
-→ limit = 5
-→ include_archived = true
-→ offset = 10
-```
-
-```text
-GET /parameter-demo/alpha?limit=abc
-→ 422 Unprocessable Content
-→ error location: query / limit
-→ error type: int_parsing
-```
-
-M2-T04 实际 HTTP 验证：
-
-```text
-POST /request-body-demo
-合法 JSON Body
+GET /projects
 → 200 OK
 ```
 
 ```text
-缺少 name
-→ 422 Unprocessable Content
-→ error location: body / name
-→ error type: missing
+GET /projects/m2-t05-demo
+→ 200 OK
 ```
 
 ```text
-tags = "python"
-→ 422 Unprocessable Content
-→ error location: body / tags
-→ error type: list_type
+PATCH /projects/m2-t05-demo
+Body: {"description": "patched"}
+→ 200 OK
+→ name / tags / members 保持不变
 ```
 
 ```text
-name = ""
-→ 422 Unprocessable Content
-→ error location: body / name
-→ error type: string_too_short
-→ min_length = 1
+PATCH /projects/m2-t05-demo
+Body: {"description": null}
+→ 200 OK
+→ description = null
 ```
-
-说明：本次终端记录的前三段 curl 响应正文存在下一条 `curl -i \` 命令覆盖部分字符的采集污染；HTTP Status、错误位置/类型、最后一段完整错误响应以及自动测试仍可作为可靠验收依据。正式记录不把被覆盖的字符串当作真实 API 返回值。
-
-当前正式本地代码验证基线：
 
 ```text
-44 tests collected
-44 tests passed
+PATCH /projects/m2-t05-demo
+Body: {"name": "m2-t05-renamed"}
+→ 200 OK
 ```
+
+```text
+DELETE /projects/m2-t05-renamed
+→ 204 No Content
+```
+
+本次若干 curl 响应正文存在终端采集污染：下一条 `curl -i \` 命令覆盖了上一条 JSON 的部分字符。因此正式记录不把污染后的字符串当成真实 API 数据；HTTP 状态、后续 CRUD 行为、OpenAPI smoke tests 以及独立 PATCH 验收仍然有效。
 
 ## 当前设计结论
 
@@ -339,39 +394,34 @@ name = ""
 - 当前共同 Storage 类型仍是具体实现 union，正式抽象留到后续 Repository 分层。
 - dataclass 可变字段使用 `field(default_factory=list)`。
 - 函数参数不使用可变默认对象。
-- Update 当前使用完整替换语义。
+- 原 Service Update 保持完整替换语义。
 - 非法 JSON 不能被转换为空数据。
 - 只捕获当前层能够处理或转换的异常。
-- `main.py` 不直接进行 JSON 持久化。
+- CLI `main.py` 不直接进行 JSON 持久化。
 - 测试通过之外必须确认测试收集。
 - Debugger 应定位数据第一次异常变化的层。
-
 - HTTP 与 REST 不等价：HTTP 是协议，REST 是架构风格。
 - Method 表达意图，URL / request target 表达资源目标。
 - Router 负责 HTTP 协议翻译，Service 保持业务规则独立。
 - HTTP Status Code 不与 CLI exit code 机械一一映射。
-- 当前 Project 没有 `id`，M2-T01 不虚构 `project.id`。
-- 当前 Update 是完整替换语义，未来 `PATCH` 部分更新需要后续正式演进。
+- 当前 Project 没有 `id`，HTTP 暂以 `project_name` 作为资源标识。
 - Uvicorn 是 ASGI Server；FastAPI 是 Web Framework，两者职责不同。
-- `app.main:app` 表示 `package.module:attribute`，最后的 `app` 是 FastAPI application instance。
-- Uvicorn 通过 import 加载 `app.main` 时，模块的 `__name__` 为 `app.main`，不会触发原 CLI 的 `if __name__ == "__main__"`。
+- `app.main:app` 表示 `package.module:attribute`。
 - FastAPI 路由由 Method + Path 共同决定。
-- `/openapi.json` 是机器可读的 OpenAPI Schema；`/docs` 是基于 Schema 的 Swagger UI。
-- 当前最小 HTTP 请求只经过 FastAPI route，不提前虚构 Service / Storage 调用。
-- 当前阶段继续保留 CLI 与 Web application 的过渡共存，不为单一路由提前拆分 Router 目录。
+- `/openapi.json` 是机器可读 OpenAPI Schema；`/docs` 是基于 Schema 的 Swagger UI。
 - Path / Query 表示参数来源，Python 类型注解表示 FastAPI 应将输入解析为什么 Python 类型。
-- 参数是否来自 Path，由它是否出现在 route path 的 `{...}` 中决定。
-- Query Parameter 不天然等于 optional；是否允许省略取决于声明方式和默认值。
-- Path Parameter 属于 URL 路由结构，在 FastAPI 中始终 required。
-- FastAPI 在调用 endpoint 前完成参数解析和校验。
-- 参数解析失败时 endpoint 不正常执行，由 FastAPI 在 HTTP 边界返回错误响应。
-- 当前参数学习 route 不接入 Project 业务层，不提前实现 Projects CRUD。
-- Pydantic Request Schema 属于 HTTP 输入边界，不等同于现有 `Project` dataclass。
-- Request Body 在进入 endpoint 前由 FastAPI / Pydantic 完成解析、类型转换和字段校验。
-- 请求体验证失败时由 FastAPI 默认异常处理形成 422，endpoint 不按正常路径执行。
-- `str | None` 表示值允许为 `None`；字段是否允许缺失还取决于是否存在默认值。
-- 类型正确不代表字段一定合法，`Field(min_length=1)` 等约束会继续参与校验。
-
+- Query Parameter 不天然等于 optional。
+- FastAPI 在调用 endpoint 前完成参数解析和请求体验证。
+- Request Schema 属于 HTTP 输入边界，不等同于现有 `Project` dataclass。
+- 请求体验证失败时由 FastAPI 默认异常处理形成 422。
+- Web Projects Route 不直接操作 JSON，必须调用 `ProjectService`。
+- Web 与 CLI 共享同一业务规则来源。
+- PATCH 的 HTTP 部分更新语义由 Router 翻译为现有 Service 的完整替换 Update。
+- `exclude_unset=True` 用于识别客户端实际发送字段，避免未发送字段被默认值覆盖。
+- “字段缺失”和“字段显式为 null”是不同的 PATCH 输入语义。
+- 项目重名属于 Service 业务规则，Route 不重复实现。
+- 404 / 重复数据等业务异常到 HTTP Response 的统一映射留到 M2-T06。
+- 不因为学习计划示例使用 `{id}` 就虚构当前不存在的 Project id。
 
 ## M1 已完成能力边界
 
@@ -391,7 +441,7 @@ Debugger
 Git 基线
 ```
 
-M1 未进入：
+M1 未进入、但当前后续阶段正在逐步补齐：
 
 ```text
 HTTP
@@ -404,10 +454,51 @@ LLM API
 Agent
 ```
 
-进入：
+其中 HTTP / FastAPI / Pydantic 已在 M2-T01 ～ M2-T05 正式进入。
+
+## 下一步：M2-T06
 
 ```text
-M2-T05｜Projects CRUD API
+M2-T06｜404、重复数据与统一异常
 ```
 
-M2-T05 才开始把 HTTP 路由真正接入现有 `ProjectService`；继续遵守当前模型事实，不提前虚构不存在的业务字段或数据库层。
+M2-T05 已经建立真实业务 HTTP 调用链：
+
+```text
+Client
+→ Uvicorn
+→ FastAPI
+→ Request / Path
+→ Route
+→ ProjectService
+→ JsonProjectStorage
+→ data/projects.json
+→ Response
+```
+
+下一任务解决当前业务异常与 HTTP 边界之间的翻译：
+
+```text
+ProjectNotFoundError
+→ HTTP 404
+
+ProjectAlreadyExistsError
+→ HTTP 409（按本项目状态码约定）
+
+存储相关异常
+→ 明确哪些可以转换为 HTTP 响应
+
+真正未处理异常
+→ HTTP 500
+```
+
+M2-T06 的重点不是在每个 endpoint 里散落重复的 `try/except`，而是建立统一、可复用的：
+
+```text
+Domain / Service Exception
+→ HTTP Response
+```
+
+转换机制。
+
+继续保持任务边界：不提前进入 M2-T07 日志专项、M2-T08 完整 FastAPI 接口测试或 M3 数据库。
