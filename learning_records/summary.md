@@ -2,17 +2,17 @@
 
 > 最后更新：2026-09-21
 >
-> 当前阶段：M2 进行中｜HTTP 与 FastAPI 后端基础
+> 当前阶段：M2 已完成｜下一阶段 M3 PostgreSQL、ORM、项目分层与权限
 >
-> 正式进度：M1 已完成；M2-T01 ～ M2-T07 已完成；下一任务 M2-T08｜FastAPI 接口测试
+> 正式进度：M1、M2 已完成；下一任务 M3-T01｜PostgreSQL 基础与 SQL CRUD
 
 ## 里程碑进度
 
 | 里程碑 | 状态 | 完成日期 | 结果 |
 | --- | --- | --- | --- |
 | M1 Python 工程化地基 | 已完成 | 2026-08-29 | 多文件工程、分层、异常、JSON CRUD、CLI、pytest、Debugger、Git 基线 |
-| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01 ～ M2-T07 已完成；下一任务 M2-T08 |
-| M3 PostgreSQL、ORM、项目分层与权限 | 待开始 | — | — |
+| M2 HTTP 与 FastAPI 后端基础 | 已完成 | 2026-09-21 | FastAPI Web API、CRUD、校验、统一异常、日志排错、接口自动化测试 |
+| M3 PostgreSQL、ORM、项目分层与权限 | 待开始 | — | 下一阶段；下一任务 M3-T01 |
 | M4 Linux 服务排错与 Docker 化 | 待开始 | — | — |
 | M5 大模型服务集成 | 待开始 | — | — |
 | M6 安全 Tool Calling | 待开始 | — | — |
@@ -33,7 +33,7 @@ M2-T04  Pydantic 请求体与校验          ✅ 已完成
 M2-T05  Projects CRUD API              ✅ 已完成
 M2-T06  404、重复数据与统一异常         ✅ 已完成
 M2-T07  日志与请求排错                  ✅ 已完成
-M2-T08  FastAPI 接口测试               → 下一任务
+M2-T08  FastAPI 接口测试               ✅ 已完成
 ```
 
 已生成 / 更新记录：
@@ -46,6 +46,8 @@ M2-T04.md
 M2-T05.md
 M2-T06.md
 M2-T07.md
+M2-T08.md
+M2.md
 ```
 
 ## M2 已完成能力概览
@@ -169,6 +171,62 @@ GET /debug/m2-t07-boom
 → 全量回归
 ```
 
+### M2-T08｜FastAPI 接口测试
+
+已新增：
+
+```text
+tests/test_web_api.py
+```
+
+共 10 条真实 HTTP application 行为测试，覆盖：
+
+```text
+空状态
+Create
+List
+Get One
+PATCH 部分更新
+Delete
+404
+409
+422
+```
+
+测试通过 `TestClient` 直接驱动 ASGI application，不要求启动 Uvicorn。
+
+测试 fixture 使用：
+
+```text
+ProjectService
+→ InMemoryProjectStorage
+```
+
+替换正式 Web service 的 JSON Storage，从而保证：
+
+```text
+test isolation
+不污染 data/projects.json
+测试独立 / 可重复 / 顺序无关
+```
+
+最终验证：
+
+```text
+test_web_api.py → 10 passed
+Web tests       → 17 passed
+full suite      → 57 passed
+```
+
+M2-T08 同时建立：
+
+```text
+只测 status code 不足以保护业务行为
+Response Body / 状态变化也必须断言
+```
+
+当前接口测试依赖栈存在 2 条第三方 deprecation warning，均不影响测试通过；Starlette TestClient 的 `httpx` fallback 已提示迁移到 `httpx2`，作为依赖维护项记录。
+
 ## 当前项目能力
 
 ### Domain / Service / Storage
@@ -207,6 +265,12 @@ GET /debug/m2-t07-boom
 - 未知异常会记录 `request_failed`，随后重新抛出并保持 HTTP 500 语义。
 - 已通过临时 RuntimeError 实验验证 traceback 能定位到自己项目文件与实际行号。
 - 临时 debug route 已删除，并完成删除后的全量回归。
+- 已使用 FastAPI `TestClient` 建立真实 HTTP application 行为测试。
+- TestClient 测试不需要启动 Uvicorn。
+- API tests 使用独立 `InMemoryProjectStorage`，不写真实 `data/projects.json`。
+- 已建立 Create / List / Get / Patch / Delete / 404 / 409 / 422 自动回归。
+- PATCH 测试同时断言响应内容，保护未发送字段不会被清空。
+
 
 ## 当前调用关系
 
@@ -308,63 +372,72 @@ RuntimeError: M2-T07 intentional failure
 真正根因
 ```
 
+### Web 自动测试调用链
+
+```text
+pytest
+→ TestClient
+→ FastAPI ASGI application
+→ middleware
+→ Pydantic / Route
+→ ProjectService
+→ InMemoryProjectStorage
+→ HTTP Response
+→ assert
+```
+
+生产与测试的主要入口区别：
+
+```text
+生产：
+HTTP socket → Uvicorn → ASGI application
+
+测试：
+TestClient → ASGI application
+```
+
+测试没有绕过 Route / Pydantic / exception handler，只是跳过真实网络 socket 和 Uvicorn。
+
 ## 最新验证基线
 
-2026-09-21，M2-T07 正式收口：
+2026-09-21，M2-T08 / M2 正式收口：
 
-首次正式代码验证：
+```bash
+pytest tests/test_web_api.py -v
+# collected 10 items
+# 10 passed, 2 warnings in 0.44s
+```
+
+```bash
+pytest   tests/test_web_smoke.py   tests/test_web_api.py   -v
+
+# collected 17 items
+# 17 passed, 2 warnings in 0.48s
+```
+
+```bash
+pytest -q
+# 57 passed, 2 warnings in 1.01s
+```
+
+本次材料没有单独提供：
 
 ```bash
 pytest --collect-only -q
-# 47 tests collected in 0.50s
-
-pytest tests/test_web_smoke.py -v
-# 7 passed in 0.33s
-
-pytest -q
-# 47 passed in 0.42s
 ```
 
-随后临时加入 `/debug/m2-t07-boom` 制造 RuntimeError，实际观察：
+但已经实际确认：
 
 ```text
-request_failed
-method=GET
-path=/debug/m2-t07-boom
-duration_ms=1.06
-error_type=RuntimeError
+test_web_api.py → 10 tests collected and passed
+Web tests       → 17 tests collected and passed
+full suite      → 57 passed
 ```
 
-Uvicorn access log：
+当前正式测试基线：
 
 ```text
-GET /debug/m2-t07-boom
-→ 500 Internal Server Error
-```
-
-traceback 最终定位：
-
-```text
-app/main.py:67
-debug_m2_t07_boom
-raise RuntimeError(...)
-
-RuntimeError: M2-T07 intentional failure
-```
-
-实验结束后已删除临时 debug route，并再次执行：
-
-```bash
-pytest -q
-# 47 passed in 1.84s
-```
-
-因此当前正式代码基线为：
-
-```text
-47 tests collected
-47 tests passed
-临时 debug route 已删除
+57 tests passed
 ```
 
 当前测试构成：
@@ -376,46 +449,49 @@ test_services.py        13
 test_json_storage.py     7
 test_cli.py              7
 test_web_smoke.py        7
+test_web_api.py         10
 --------------------------
-Total                   47
+Total                   57
 ```
 
-Web smoke tests：
+M2-T08 API behavior tests：
 
 ```text
-test_fastapi_app_exists
-test_root_route_is_in_openapi_schema
-test_parameter_demo_is_in_openapi_schema
-test_request_body_demo_is_in_openapi_schema
-test_project_crud_routes_are_in_openapi_schema
-test_project_exception_handlers_are_registered
-test_request_validation_handler_is_registered
+test_projects_start_empty
+test_create_project
+test_list_projects
+test_get_project
+test_patch_project_preserves_unsent_fields
+test_delete_project
+test_missing_project_returns_404
+test_duplicate_project_returns_409
+test_patch_rename_conflict_returns_409
+test_invalid_project_body_returns_422
 ```
 
-M2-T07 已验证日志：
+当前 pytest 有 2 条第三方 deprecation warning：
 
 ```text
-200
-→ request_complete
+Starlette TestClient:
+httpx fallback deprecated; prefer httpx2
 
-routing 404
-→ request_complete
-→ 无 business_error
+Starlette / AnyIO:
+anyio.abc.BlockingPortal alias deprecated
+```
 
-business 404
-→ business_error type=ProjectNotFoundError
-→ request_complete
+处理原则：
 
-Body 422
-→ validation_error loc=body.name
+```text
+不把 warning 当作测试失败
+不隐藏所有 DeprecationWarning
+不修改 site-packages
+记录并在依赖维护时迁移兼容版本
+```
 
-Query 422
-→ validation_error loc=query.limit
+其中 TestClient dev dependency 建议迁移到：
 
-500
-→ request_failed error_type=RuntimeError
-→ traceback
-→ app/main.py:67
+```toml
+"httpx2>=2.13,<3"
 ```
 
 ## 当前设计结论
@@ -443,15 +519,23 @@ Query 422
 - 已实际验证 `request_failed → raise → HTTP 500 → traceback` 的完整异常链。
 - traceback 中 middleware 的 `call_next()` 行是传播经过点，真正根因应继续向下定位到最内层自己代码。
 - 临时故障代码用于实验后必须删除，并重新执行全量回归确认正式基线。
+- TestClient 直接驱动 ASGI application，不要求真实 TCP/Uvicorn。
+- Web API tests 使用 test-only InMemoryProjectStorage，避免污染真实 JSON 数据。
+- 测试必须隔离状态，不能依赖测试执行顺序。
+- 只断言 HTTP status 不能充分证明业务行为正确；关键 Response Body 和状态变化也应验证。
+- `test_json_storage.py`、`test_services.py`、`test_web_smoke.py`、`test_web_api.py` 分别保护不同测试层。
+- M2 最终已经把人工 curl 验证转换为自动 HTTP 回归测试。
+
 
 ## 当前 M2 能力边界
 
-已经完成：
+M2 已正式完成：
 
 ```text
 HTTP / REST
 FastAPI application
 Uvicorn
+OpenAPI / Swagger
 Path / Query
 Pydantic Request Body
 422
@@ -467,57 +551,69 @@ routing 404 / business 404 定位
 validation_error 定位
 500 request_failed
 traceback 文件 / 行号定位
-故障实验后的代码清理与回归
+FastAPI TestClient
+HTTP 接口自动化测试
+test isolation
 ```
 
-尚未正式进入：
+M2 未提前进入：
 
 ```text
-M2-T08 FastAPI 完整接口测试
 PostgreSQL
 SQLAlchemy
+Repository
+数据库 Migration / Transaction
+认证 / 权限
 Docker
 LLM API
 Tool Calling
 Workflow / RAG
 ```
 
-## 下一步：M2-T08
+## 下一步：M3-T01
+
+M2 已正式完成：
 
 ```text
-M2-T08｜FastAPI 接口测试
+M2｜HTTP 与 FastAPI 后端基础
+✅ 已完成
 ```
 
-M2-T07 已正式完成：
+M2 最终形成：
 
 ```text
-request_complete
-business_error
-validation_error
-request_failed
-routing 404 / business 404
-422 参数位置定位
-500 traceback 定位
-临时故障代码清理
-最终 pytest 回归
+Client
+→ Uvicorn
+→ FastAPI
+→ Middleware
+→ Pydantic / Route
+→ ProjectService
+→ JsonProjectStorage
+→ HTTP Response
 ```
 
-当前正式测试基线：
+并形成对应自动测试链：
 
 ```text
-47 tests collected
-47 tests passed
+pytest
+→ TestClient
+→ ASGI application
+→ ProjectService
+→ InMemoryProjectStorage
+→ HTTP Response
+→ assert
 ```
 
-M2-T08 将进入 M2 最后一张任务卡，重点从当前的 OpenAPI / handler smoke tests 扩展到真实 HTTP 接口自动化测试：
+下一阶段：
 
 ```text
-正常路径
-非法输入
-不存在资源
-重复数据
-CRUD 行为
-状态码与响应体
+M3｜PostgreSQL、ORM、项目分层与权限
 ```
 
-继续保持任务边界：M2-T08 只完成 FastAPI 接口测试和 M2 收口，不提前进入 M3 PostgreSQL / ORM。
+下一任务：
+
+```text
+M3-T01｜PostgreSQL 基础与 SQL CRUD
+```
+
+M3 将从当前 JSON Storage 继续演进到真正数据库分层；按 StudyPLAN 顺序推进，不提前堆 ORM 之外的后续能力。

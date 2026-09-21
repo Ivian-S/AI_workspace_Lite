@@ -20,5 +20,6 @@ include = ["app*"]
 [project.optional-dependencies]
 dev = [
     "pytest>=8,<10",
+    "httpx>=0.28,<0.29",
 ]
 
