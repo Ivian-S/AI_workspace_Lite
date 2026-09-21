@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 
 from app.main import app
+from app.exceptions import (
+    ProjectAlreadyExistsError,
+    ProjectNotFoundError,
+)
 
 def test_fastapi_app_exists() -> None:
     assert isinstance(app, FastAPI)
@@ -114,4 +118,15 @@ def test_project_crud_routes_are_in_openapi_schema() -> None:
     assert (
         "204"
         in detail["delete"]["responses"]
+    )
+
+def test_project_exception_handlers_are_registered() -> None:
+    assert (
+        ProjectNotFoundError
+        in app.exception_handlers
+    )
+
+    assert (
+        ProjectAlreadyExistsError
+        in app.exception_handlers
     )

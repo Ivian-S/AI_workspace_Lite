@@ -3,7 +3,8 @@
 import argparse
 from pathlib import Path
 
-from fastapi import FastAPI,status
+from fastapi import FastAPI,Request,status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app import APP_NAME
@@ -48,6 +49,33 @@ app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
 )
+
+@app.exception_handler(ProjectNotFoundError)
+async def project_not_found_exception_handler(
+    _request: Request,
+    exc: ProjectNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "detail": str(exc),
+        },
+    )
+
+
+@app.exception_handler(ProjectAlreadyExistsError)
+async def project_already_exists_exception_handler(
+    _request: Request,
+    exc: ProjectAlreadyExistsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": str(exc),
+        },
+    )
+
+
 
 web_project_service = ProjectService(
     storage=JsonProjectStorage(DEFAULT_STORAGE_PATH),
