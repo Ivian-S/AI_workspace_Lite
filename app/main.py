@@ -1,9 +1,17 @@
 # 修改：/project/app/main.py
+import logging
+import time
+
+from collections.abc import Awaitable,Callable
 
 import argparse
 from pathlib import Path
 
-from fastapi import FastAPI,Request,status
+from fastapi import FastAPI,Request,status,Response
+from fastapi.exception_handlers import (
+    request_validation_exception_handler,
+)
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -20,6 +28,7 @@ from app.services import ProjectService
 from app.storage import JsonProjectStorage
 
 DEFAULT_STORAGE_PATH = Path("data/projects.json")
+logger = logging.getLogger("uvicorn.error")
 
 #新增：Request Body Schema
 class ProjectRequestBody(BaseModel):
@@ -50,11 +59,80 @@ app = FastAPI(
     version=APP_VERSION,
 )
 
+
+
+@app.middleware("http")
+async def log_http_request(
+    request: Request,
+    call_next: Callable[
+        [Request],
+        Awaitable[Response],
+    ],
+) -> Response:
+    start_time = time.perf_counter()
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        duration_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        logger.error(
+            (
+                "request_failed "
+                "method=%s "
+                "path=%s "
+                "duration_ms=%.2f "
+                "error_type=%s"
+            ),
+            request.method,
+            request.url.path,
+            duration_ms,
+            type(exc).__name__,
+        )
+
+        raise
+
+    duration_ms = (
+        time.perf_counter() - start_time
+    ) * 1000
+
+    logger.info(
+        (
+            "request_complete "
+            "method=%s "
+            "path=%s "
+            "status=%s "
+            "duration_ms=%.2f"
+        ),
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+
+    return response
+
 @app.exception_handler(ProjectNotFoundError)
 async def project_not_found_exception_handler(
-    _request: Request,
+    request: Request,
     exc: ProjectNotFoundError,
 ) -> JSONResponse:
+    logger.warning(
+        (
+            "business_error "
+            "type=%s "
+            "method=%s "
+            "path=%s "
+            "detail=%s"
+        ),
+        type(exc).__name__,
+        request.method,
+        request.url.path,
+        str(exc),
+    )
+
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={
@@ -65,9 +143,23 @@ async def project_not_found_exception_handler(
 
 @app.exception_handler(ProjectAlreadyExistsError)
 async def project_already_exists_exception_handler(
-    _request: Request,
+    request: Request,
     exc: ProjectAlreadyExistsError,
 ) -> JSONResponse:
+    logger.warning(
+        (
+            "business_error "
+            "type=%s "
+            "method=%s "
+            "path=%s "
+            "detail=%s"
+        ),
+        type(exc).__name__,
+        request.method,
+        request.url.path,
+        str(exc),
+    )
+
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={
@@ -75,7 +167,41 @@ async def project_already_exists_exception_handler(
         },
     )
 
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> Response:
+    errors = [
+        {
+            "loc": ".".join(
+                str(part)
+                for part in error["loc"]
+            ),
+            "type": error["type"],
+            "msg": error["msg"],
+        }
+        for error in exc.errors()
+    ]
 
+    logger.warning(
+        (
+            "validation_error "
+            "method=%s "
+            "path=%s "
+            "errors=%s"
+        ),
+        request.method,
+        request.url.path,
+        errors,
+    )
+
+    return await (
+        request_validation_exception_handler(
+            request,
+            exc,
+        )
+    )
 
 web_project_service = ProjectService(
     storage=JsonProjectStorage(DEFAULT_STORAGE_PATH),

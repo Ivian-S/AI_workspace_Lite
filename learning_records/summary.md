@@ -4,14 +4,14 @@
 >
 > 当前阶段：M2 进行中｜HTTP 与 FastAPI 后端基础
 >
-> 正式进度：M1 已完成；M2-T01 ～ M2-T06 已完成；下一任务 M2-T07
+> 正式进度：M1 已完成；M2-T01 ～ M2-T07 已完成；下一任务 M2-T08｜FastAPI 接口测试
 
 ## 里程碑进度
 
 | 里程碑 | 状态 | 完成日期 | 结果 |
 | --- | --- | --- | --- |
 | M1 Python 工程化地基 | 已完成 | 2026-08-29 | 多文件工程、分层、异常、JSON CRUD、CLI、pytest、Debugger、Git 基线 |
-| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01 ～ M2-T06 已完成；下一任务 M2-T07 |
+| M2 HTTP 与 FastAPI 后端基础 | 进行中 | — | M2-T01 ～ M2-T07 已完成；下一任务 M2-T08 |
 | M3 PostgreSQL、ORM、项目分层与权限 | 待开始 | — | — |
 | M4 Linux 服务排错与 Docker 化 | 待开始 | — | — |
 | M5 大模型服务集成 | 待开始 | — | — |
@@ -32,10 +32,11 @@ M2-T03  路径参数与查询参数             ✅ 已完成
 M2-T04  Pydantic 请求体与校验          ✅ 已完成
 M2-T05  Projects CRUD API              ✅ 已完成
 M2-T06  404、重复数据与统一异常         ✅ 已完成
-M2-T07  日志与请求排错                  → 下一任务
+M2-T07  日志与请求排错                  ✅ 已完成
+M2-T08  FastAPI 接口测试               → 下一任务
 ```
 
-已生成记录：
+已生成 / 更新记录：
 
 ```text
 M2-T01.md
@@ -44,95 +45,26 @@ M2-T03.md
 M2-T04.md
 M2-T05.md
 M2-T06.md
+M2-T07.md
 ```
 
 ## M2 已完成能力概览
 
 ### M2-T01｜HTTP / REST
 
-已建立：
-
-```text
-HTTP Request / Response
-Method / URL / Header / Body
-Status Code
-HTTP 与 REST 的区别
-Router / Service / Storage 的职责边界
-CLI exit code 与 HTTP status code 的边界
-```
-
-当前 Project 尚无数据库 `id`，HTTP 资源继续暂以 `name` 作为标识。
+已建立 HTTP Request / Response、Method、URL、Header、Body、Status Code、REST、Router / Service / Storage 边界，以及 CLI exit code 与 HTTP status code 的区别。
 
 ### M2-T02｜FastAPI 最小应用
 
-已建立：
-
-```text
-FastAPI application
-Uvicorn ASGI Server
-GET /
-app.main:app
-路由注册
-/openapi.json
-/docs
-```
-
-能够解释：
-
-```text
-Client
-→ Uvicorn
-→ FastAPI
-→ Route
-→ endpoint
-→ HTTP Response
-```
+已建立 FastAPI application、Uvicorn ASGI Server、最小 Route、`app.main:app`、OpenAPI 与 Swagger UI。
 
 ### M2-T03｜Path / Query
 
-已建立：
-
-```text
-Path Parameter
-Query Parameter
-required / optional
-int / bool 类型解析
-非法 Query → 422
-```
-
-能够解释：
-
-```text
-URL 中的数据首先是文本
-→ FastAPI 根据 Python 类型注解解析 / 校验
-→ Python 参数
-```
+已建立 Path Parameter、Query Parameter、required / optional、`int` / `bool` 类型转换，以及非法 Query → 422 的调用链。
 
 ### M2-T04｜Pydantic Request Body
 
-已建立：
-
-```text
-Pydantic BaseModel
-Request Schema
-Field 约束
-required / optional
-允许 None 与允许缺失的区别
-JSON Body → Python Pydantic object
-RequestValidationError → 422
-```
-
-当前：
-
-```text
-ProjectRequestBody
-→ HTTP 输入 Schema
-
-Project dataclass
-→ Domain Model
-```
-
-两者保持职责分离。
+已建立 Pydantic `BaseModel`、Request Schema、`Field` 约束、required / optional、允许 `None` 与允许字段缺失的区别，以及 RequestValidationError → 422。
 
 ### M2-T05｜Projects CRUD API
 
@@ -146,91 +78,96 @@ PATCH  /projects/{project_name}
 DELETE /projects/{project_name}
 ```
 
-真实调用链：
+Web Route 已正式接入：
 
 ```text
-Client
-→ Uvicorn
-→ FastAPI
-→ Pydantic / Path
-→ Web Route
-→ ProjectService
+ProjectService
 → JsonProjectStorage
 → data/projects.json
-→ HTTP Response
 ```
 
-Web 与 CLI 复用同一个 `ProjectService`，Route 不复制业务规则。
+PATCH 使用 `model_dump(exclude_unset=True)` 区分未发送字段与显式值，并由 Router 合并部分更新后复用现有完整替换 Service。
 
-PATCH 使用：
-
-```python
-body.model_dump(exclude_unset=True)
-```
-
-识别客户端真正发送的字段，并由 Router 将局部更新合并为完整数据后调用现有完整替换 Service。
+### M2-T06｜统一业务异常
 
 已建立：
 
 ```text
-字段没传
-≠
-字段显式为 null
-```
-
-### M2-T06｜统一业务异常 → HTTP
-
-已建立 FastAPI exception handler：
-
-```text
 ProjectNotFoundError
-→ 404 Not Found
+→ FastAPI exception handler
+→ 404
 
 ProjectAlreadyExistsError
-→ 409 Conflict
+→ FastAPI exception handler
+→ 409
 ```
 
-Service 保持：
+Service 不依赖 `HTTPException` / FastAPI；CLI 与 Web 各自翻译同一个业务异常。
+
+### M2-T07｜日志与请求排错
+
+已正式完成并验证：
 
 ```text
-只表达业务失败原因
-不依赖 HTTPException
-不依赖 FastAPI
+request_complete
+business_error
+validation_error
+request_failed
+method / path / status / duration
+routing 404 与 business 404 区分
+body / query 422 定位
+500 traceback 文件 / 行号定位
 ```
 
-不同入口分别翻译：
+实际日志已经证明：
 
 ```text
-CLI
-→ Error 文本 + exit code
+GET /projects
+→ request_complete
+→ 200
 
-Web
-→ HTTP status + JSON
+GET /does-not-exist
+→ request_complete
+→ 404
+→ 无 business_error
+→ routing 404
+
+GET /projects/m2-t07-missing
+→ business_error type=ProjectNotFoundError
+→ request_complete
+→ 404
+→ business 404
+
+POST /projects name=""
+→ validation_error loc=body.name
+→ 422
+
+GET /parameter-demo/alpha?limit=abc
+→ validation_error loc=query.limit
+→ 422
+
+GET /debug/m2-t07-boom
+→ request_failed error_type=RuntimeError
+→ HTTP 500
+→ traceback 定位 app/main.py:67
+→ debug_m2_t07_boom
 ```
 
-当前能够明确区分：
+临时 `/debug/m2-t07-boom` 故障路由已删除，随后再次执行全量回归：
 
 ```text
-422
-→ Request / Pydantic 校验失败
-
-404
-→ Service 判定资源不存在
-
-409
-→ Service 判定业务状态冲突
-
-500
-→ 未处理的服务器内部错误
+47 passed in 1.84s
 ```
 
-不使用：
+因此 M2-T07 已完成完整闭环：
 
-```python
-except Exception:
+```text
+日志观察
+→ 故障复现
+→ traceback 定位
+→ 删除临时故障代码
+→ 全量回归
 ```
-
-把未知服务器错误伪装成 4xx。
 
 ## 当前项目能力
 
@@ -239,126 +176,195 @@ except Exception:
 - `Project` 使用 dataclass，字段为 `name / description / tags / members`。
 - `ProjectService` 支持完整 CRUD。
 - `InMemoryProjectStorage` 保留内存实现。
-- `JsonProjectStorage` 支持 JSON 持久化、跨实例和跨进程加载。
+- `JsonProjectStorage` 支持 JSON 持久化。
 - 非法 JSON / 非法存储数据使用 `ProjectStorageDataError`。
 - 重复名称使用 `ProjectAlreadyExistsError`。
 - Project 不存在使用 `ProjectNotFoundError`。
 - Service 不直接访问 Storage 内部状态。
-- Update Service 继续保持完整替换语义。
+- Update Service 保持完整替换语义。
 
 ### CLI
 
-- CLI 支持 `create / list / get / update / delete`。
+- CLI 支持 create / list / get / update / delete。
 - CLI 不直接操作 JSON。
-- 成功退出码为 `0`。
-- 已知业务 / 存储错误返回 `1`。
-- CLI 与 Web 复用相同 Service 业务规则。
+- CLI 与 Web 复用相同 Service。
+- 已知业务 / 存储错误转换为 CLI 错误输出与 exit code。
 
 ### Web / FastAPI
 
-- FastAPI application 与原 CLI 入口共存。
+- FastAPI 与 CLI 入口共存。
 - Uvicorn 作为 ASGI Server。
-- 已建立 GET `/`。
-- 已建立 Path / Query 学习路由。
-- 已建立 Pydantic Request Body 学习路由。
+- 已完成 Path / Query 与 Request Body 学习路由。
 - 已实现 Projects HTTP CRUD。
-- POST 创建成功使用 201。
-- DELETE 成功使用 204。
-- FastAPI / Pydantic 请求校验失败返回 422。
+- 请求校验失败返回 422。
 - Project 不存在统一返回 404。
 - Project 名称冲突统一返回 409。
-- CRUD Route 不直接访问 JSON。
-- CRUD Route 调用 `ProjectService`。
-- 业务异常通过 application exception handler 统一翻译。
+- 已建立 HTTP middleware 请求日志。
+- 已建立业务异常日志。
+- 已建立 RequestValidationError 日志。
+- 422 Response 继续复用 FastAPI 默认 handler。
+- 当前没有默认记录完整 Body、Token 等敏感数据。
+- 未知异常会记录 `request_failed`，随后重新抛出并保持 HTTP 500 语义。
+- 已通过临时 RuntimeError 实验验证 traceback 能定位到自己项目文件与实际行号。
+- 临时 debug route 已删除，并完成删除后的全量回归。
 
 ## 当前调用关系
 
-### CLI
-
-```text
-Terminal
-→ argparse / main.py
-→ ProjectService
-→ JsonProjectStorage
-→ data/projects.json
-```
-
-### Web 成功路径
+### Web 正常请求
 
 ```text
 Client
 → Uvicorn
+→ HTTP logging middleware
 → FastAPI
 → Route
 → ProjectService
 → JsonProjectStorage
-→ data/projects.json
-→ Project / list[Project]
-→ Response Schema
 → HTTP Response
+→ request_complete
+→ Uvicorn access log
 ```
 
-### Web Request 校验失败
+### Routing 404
 
 ```text
 Client
-→ FastAPI
-→ Pydantic
-→ RequestValidationError
-→ FastAPI 默认 handler
-→ HTTP 422
+→ middleware
+→ FastAPI route matching
+→ no matching route
+→ 404 Response
+→ request_complete(status=404)
 ```
 
-### Web 资源不存在
+没有：
+
+```text
+business_error
+```
+
+### Business 404
 
 ```text
 Client
-→ FastAPI
+→ middleware
 → Route
 → ProjectService
 → ProjectNotFoundError
-→ FastAPI exception handler
-→ HTTP 404
+→ business_error
+→ exception handler
+→ 404 Response
+→ request_complete(status=404)
 ```
 
-### Web 业务状态冲突
+### Validation 422
 
 ```text
 Client
-→ FastAPI
-→ Route
-→ ProjectService
-→ ProjectAlreadyExistsError
-→ FastAPI exception handler
-→ HTTP 409
+→ middleware
+→ FastAPI / Pydantic
+→ RequestValidationError
+→ validation_error(loc / type / msg)
+→ FastAPI 默认 validation handler
+→ 422 Response
+→ request_complete(status=422)
 ```
 
-### PATCH
+### 已验证的未处理 500 链
 
 ```text
-PATCH partial body
-→ Pydantic ProjectUpdateRequest
-→ model_dump(exclude_unset=True)
-→ 读取当前 Project
-→ Router 合并未修改字段
-→ ProjectService.update_project(...)
-→ JsonProjectStorage
-→ HTTP Response
+Client
+→ middleware
+→ application code
+→ RuntimeError
+→ request_failed(error_type=RuntimeError)
+→ raise
+→ Uvicorn / ASGI traceback
+→ HTTP 500
+```
+
+本次实际 traceback 中：
+
+```text
+app/main.py:82
+log_http_request
+response = await call_next(request)
+```
+
+是异常传播经过 middleware 的位置；真正抛出异常的根因位置为：
+
+```text
+app/main.py:67
+debug_m2_t07_boom
+raise RuntimeError(...)
+
+RuntimeError: M2-T07 intentional failure
+```
+
+因此已经能够区分：
+
+```text
+异常传播经过点
+≠
+真正根因
 ```
 
 ## 最新验证基线
 
-2026-09-21，M2-T06：
+2026-09-21，M2-T07 正式收口：
+
+首次正式代码验证：
 
 ```bash
 pytest --collect-only -q
-# 46 tests collected in 1.80s
+# 47 tests collected in 0.50s
 
 pytest tests/test_web_smoke.py -v
-# 6 passed in 0.33s
+# 7 passed in 0.33s
 
 pytest -q
-# 46 passed in 0.46s
+# 47 passed in 0.42s
+```
+
+随后临时加入 `/debug/m2-t07-boom` 制造 RuntimeError，实际观察：
+
+```text
+request_failed
+method=GET
+path=/debug/m2-t07-boom
+duration_ms=1.06
+error_type=RuntimeError
+```
+
+Uvicorn access log：
+
+```text
+GET /debug/m2-t07-boom
+→ 500 Internal Server Error
+```
+
+traceback 最终定位：
+
+```text
+app/main.py:67
+debug_m2_t07_boom
+raise RuntimeError(...)
+
+RuntimeError: M2-T07 intentional failure
+```
+
+实验结束后已删除临时 debug route，并再次执行：
+
+```bash
+pytest -q
+# 47 passed in 1.84s
+```
+
+因此当前正式代码基线为：
+
+```text
+47 tests collected
+47 tests passed
+临时 debug route 已删除
 ```
 
 当前测试构成：
@@ -369,9 +375,9 @@ test_project_state.py   11
 test_services.py        13
 test_json_storage.py     7
 test_cli.py              7
-test_web_smoke.py        6
+test_web_smoke.py        7
 --------------------------
-Total                   46
+Total                   47
 ```
 
 Web smoke tests：
@@ -383,68 +389,60 @@ test_parameter_demo_is_in_openapi_schema
 test_request_body_demo_is_in_openapi_schema
 test_project_crud_routes_are_in_openapi_schema
 test_project_exception_handlers_are_registered
+test_request_validation_handler_is_registered
 ```
 
-M2-T06 实际 HTTP：
+M2-T07 已验证日志：
 
 ```text
-POST /projects
-name = m2-t06-alpha
-→ 201 Created
+200
+→ request_complete
+
+routing 404
+→ request_complete
+→ 无 business_error
+
+business 404
+→ business_error type=ProjectNotFoundError
+→ request_complete
+
+Body 422
+→ validation_error loc=body.name
+
+Query 422
+→ validation_error loc=query.limit
+
+500
+→ request_failed error_type=RuntimeError
+→ traceback
+→ app/main.py:67
 ```
-
-```text
-POST duplicate
-name = m2-t06-alpha
-→ 409 Conflict
-→ Project already exists
-```
-
-```text
-GET /projects/m2-t06-missing
-→ 404 Not Found
-→ Project not found
-```
-
-```text
-DELETE /projects/m2-t06-missing
-→ 404 Not Found
-→ Project not found
-```
-
-```text
-PATCH /projects/m2-t06-alpha
-name = m2-t06-beta（已存在）
-→ 409 Conflict
-→ Project already exists
-```
-
-本次材料没有重新执行 `name=""` 的 422 curl 对照实验；该行为已在 M2-T04 实测，本卡没有修改相应 Request Schema，因此不虚构本次执行记录，也不影响 M2-T06 404 / 409 核心验收。
-
-部分成功请求的 JSON 正文仍有下一条 `curl -i \` 覆盖字符的终端采集污染；异常响应 404 / 409 的关键 JSON 完整可读，pytest 与状态码证据有效。
 
 ## 当前设计结论
 
 - Model 负责领域数据。
-- Service 负责业务动作和业务规则。
+- Service 负责业务动作与业务规则。
 - Storage 负责数据存取。
 - CLI 负责命令行协议翻译。
 - FastAPI Route 负责 HTTP 协议翻译。
-- Service 不依赖 CLI，也不依赖 FastAPI。
-- Web Route 不直接操作 JSON。
+- Service 不依赖 FastAPI。
 - Web 与 CLI 共用 Service。
-- Pydantic Schema 属于 HTTP 边界，不替代当前 Domain dataclass。
-- Request 参数 / Body 校验在 endpoint 正常业务逻辑之前完成。
-- RequestValidationError 继续由 FastAPI 默认处理为 422。
-- `ProjectNotFoundError` 是业务异常，由 Web 统一翻译为 404。
-- `ProjectAlreadyExistsError` 是业务异常，由 Web 统一翻译为 409。
-- 同一种业务异常不在每个 endpoint 重复 try/except。
-- Service 不抛 `HTTPException`，避免业务层依赖 HTTP 框架。
-- 不捕获所有 `Exception` 并转换成 4xx。
-- 未知服务器程序错误应保留为 500 类错误，以便后续日志和排错。
-- 当前 `Project` 没有稳定数据库主键，继续使用 `project_name` 作为 HTTP 资源标识。
-- M2-T05 的 PATCH 由 Router 负责把部分更新翻译为 Service 的完整替换 Update。
-- M2-T06 已闭合业务异常到 HTTP Response 的边界。
+- Pydantic Schema 属于 HTTP 边界。
+- RequestValidationError 继续由 FastAPI 默认机制生成 422。
+- `ProjectNotFoundError` 统一翻译为 404。
+- `ProjectAlreadyExistsError` 统一翻译为 409。
+- HTTP Status 相同不代表故障发生在同一层。
+- routing 404 与 business 404 必须结合应用日志区分。
+- 422 排错优先读取 `loc` 判断 path / query / body。
+- Uvicorn access log 表达 HTTP 访问结果；application log 表达应用内部上下文。
+- middleware 可捕获 `Exception` 用于记录，但必须 `raise` 让未知异常继续传播。
+- 不使用 `except Exception` 把服务器 Bug 伪装为 4xx。
+- 日志默认不记录完整 Request Body、密码、Token 或 Authorization Header。
+- 日志不能代替异常处理，异常处理也不能代替日志。
+- 500 排错必须最终落到 traceback 中的错误类型、自己项目文件与实际行号。
+- 已实际验证 `request_failed → raise → HTTP 500 → traceback` 的完整异常链。
+- traceback 中 middleware 的 `call_next()` 行是传播经过点，真正根因应继续向下定位到最内层自己代码。
+- 临时故障代码用于实验后必须删除，并重新执行全量回归确认正式基线。
 
 ## 当前 M2 能力边界
 
@@ -454,10 +452,8 @@ name = m2-t06-beta（已存在）
 HTTP / REST
 FastAPI application
 Uvicorn
-Path Parameter
-Query Parameter
+Path / Query
 Pydantic Request Body
-Request Schema
 422
 Projects CRUD API
 PATCH partial update
@@ -466,15 +462,18 @@ Router → Service → Storage
 409
 FastAPI exception handler
 业务异常 → HTTP Response
+HTTP middleware 日志
+routing 404 / business 404 定位
+validation_error 定位
+500 request_failed
+traceback 文件 / 行号定位
+故障实验后的代码清理与回归
 ```
 
 尚未正式进入：
 
 ```text
-结构化日志
-请求排错
-500 traceback 分析
-完整 FastAPI TestClient API 测试
+M2-T08 FastAPI 完整接口测试
 PostgreSQL
 SQLAlchemy
 Docker
@@ -483,33 +482,42 @@ Tool Calling
 Workflow / RAG
 ```
 
-## 下一步：M2-T07
+## 下一步：M2-T08
 
 ```text
-M2-T07｜日志与请求排错
+M2-T08｜FastAPI 接口测试
 ```
 
-M2-T06 已经能区分：
+M2-T07 已正式完成：
 
 ```text
-422 → 请求输入校验失败
-404 → 资源不存在
-409 → 业务状态冲突
-500 → 未处理服务器错误
+request_complete
+business_error
+validation_error
+request_failed
+routing 404 / business 404
+422 参数位置定位
+500 traceback 定位
+临时故障代码清理
+最终 pytest 回归
 ```
 
-下一任务开始关注：
+当前正式测试基线：
 
 ```text
-错误发生时如何留下足够信息
-请求 Method / Path
-业务上下文
-异常信息
-traceback
-404 / 422 / 500 如何定位
-参数到底在哪一层丢失
+47 tests collected
+47 tests passed
 ```
 
-M2-T07 的重点是**可观测性和故障定位**，不是继续增加新的 CRUD 功能。
+M2-T08 将进入 M2 最后一张任务卡，重点从当前的 OpenAPI / handler smoke tests 扩展到真实 HTTP 接口自动化测试：
 
-继续保持任务边界：不提前进入 M2-T08 完整接口自动化测试，也不进入 M3 数据库。
+```text
+正常路径
+非法输入
+不存在资源
+重复数据
+CRUD 行为
+状态码与响应体
+```
+
+继续保持任务边界：M2-T08 只完成 FastAPI 接口测试和 M2 收口，不提前进入 M3 PostgreSQL / ORM。

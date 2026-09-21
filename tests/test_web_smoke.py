@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 
 from app.main import app
 from app.exceptions import (
@@ -128,5 +129,11 @@ def test_project_exception_handlers_are_registered() -> None:
 
     assert (
         ProjectAlreadyExistsError
+        in app.exception_handlers
+    )
+
+def test_request_validation_handler_is_registered() -> None:
+    assert (
+        RequestValidationError
         in app.exception_handlers
     )
