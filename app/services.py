@@ -106,3 +106,264 @@ class ProjectService:
 #     │
 #     ├── 不决定 Project 应该有哪些业务规则
 #     └── 只负责保存和读取
+
+# 新增数据库业务Service
+from sqlalchemy.orm import Session
+
+from app.exceptions import (
+    DbProjectAlreadyExistsError,
+    DbProjectNotFoundError,
+    TaskProjectWorkspaceMismatchError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+    WorkspaceAlreadyExistsError,
+    WorkspaceNotFoundError,
+)
+
+from app.repositories.projects import (
+    ProjectRepository,
+)
+from app.repositories.tasks import (
+    TaskListItem,
+    TaskRepository,
+)
+from app.repositories.users import UserRepository
+from app.repositories.workspaces import (
+    WorkspaceRepository,
+)
+
+class UserDbService:
+    def __init__(
+        self,
+        session: Session,
+    ) -> None:
+        self._session = session
+        self._users = UserRepository(session)
+
+    def create_user(
+        self,
+        *,
+        username: str,
+        email: str,
+    ):
+        with self._session.begin():
+            if (
+                self._users.get_by_username(
+                    username
+                )
+                is not None
+            ):
+                raise UserAlreadyExistsError(
+                    username
+                )
+
+            if (
+                self._users.get_by_email(email)
+                is not None
+            ):
+                raise UserAlreadyExistsError(
+                    email
+                )
+
+            return self._users.add(
+                username=username,
+                email=email,
+            )
+
+
+class WorkspaceDbService:
+    def __init__(
+        self,
+        session: Session,
+    ) -> None:
+        self._session = session
+        self._users = UserRepository(session)
+        self._workspaces = (
+            WorkspaceRepository(session)
+        )
+
+    def create_workspace(
+        self,
+        *,
+        owner_user_id: int,
+        name: str,
+    ):
+        with self._session.begin():
+
+            owner = self._users.get(
+                owner_user_id
+            )
+            if owner is None:
+                raise UserNotFoundError(
+                    owner_user_id
+                )
+
+            existing = (
+                self._workspaces
+                .get_by_owner_and_name(
+                    owner_user_id=owner_user_id,
+                    name=name,
+                )
+            )
+
+            if existing is not None:
+                raise WorkspaceAlreadyExistsError(
+                    name
+                )
+
+            workspace = self._workspaces.add(
+                owner_user_id=owner_user_id,
+                name=name,
+            )
+
+            self._workspaces.add_member(
+                workspace_id=workspace.id,
+                user_id=owner_user_id,
+                role="owner",
+            )
+
+            return workspace
+
+class ProjectDbService:
+    def __init__(
+        self,
+        session: Session,
+    ) -> None:
+        self._session = session
+        self._workspaces = (
+            WorkspaceRepository(session)
+        )
+        self._projects = (
+            ProjectRepository(session)
+        )
+
+    def create_project(
+        self,
+        *,
+        workspace_id: int,
+        name: str,
+        description: str | None,
+    ):
+        with self._session.begin():
+
+            workspace = self._workspaces.get(
+                workspace_id
+            )
+
+            if workspace is None:
+                raise WorkspaceNotFoundError(
+                    workspace_id
+                )
+
+            existing = (
+                self._projects
+                .get_by_workspace_and_name(
+                    workspace_id=workspace_id,
+                    name=name,
+                )
+            )
+
+            if existing is not None:
+                raise DbProjectAlreadyExistsError(
+                    name
+                )
+
+            return self._projects.add(
+                workspace_id=workspace_id,
+                name=name,
+                description=description,
+            )
+
+class TaskDbService:
+    def __init__(
+        self,
+        session: Session,
+    ) -> None:
+        self._session = session
+        self._workspaces = (
+            WorkspaceRepository(session)
+        )
+        self._projects = (
+            ProjectRepository(session)
+        )
+        self._tasks = TaskRepository(session)
+
+    def create_task(
+        self,
+        *,
+        workspace_id: int,
+        project_id: int | None,
+        title: str,
+        description: str | None,
+        status: str,
+    ):
+        with self._session.begin():
+
+            workspace = self._workspaces.get(
+                workspace_id
+            )
+
+            if workspace is None:
+                raise WorkspaceNotFoundError(
+                    workspace_id
+                )
+
+            if project_id is not None:
+                project = self._projects.get(
+                    project_id
+                )
+
+                if project is None:
+                    raise DbProjectNotFoundError(
+                        project_id
+                    )
+
+                if (
+                    project.workspace_id
+                    != workspace_id
+                ):
+                    raise (
+                        TaskProjectWorkspaceMismatchError(
+                            project_id
+                        )
+                    )
+
+            return self._tasks.add(
+                workspace_id=workspace_id,
+                project_id=project_id,
+                title=title,
+                description=description,
+                status=status,
+            )
+
+    def list_tasks(
+        self,
+        *,
+        workspace_id: int,
+        status: str | None,
+        project_id: int | None,
+        limit: int,
+        offset: int,
+        sort_by: str,
+        order: str,
+        title_contains: str | None = None,
+    ) -> tuple[list[TaskListItem], int]:
+
+        if (
+            self._workspaces.get(workspace_id)
+            is None
+        ):
+            raise WorkspaceNotFoundError(
+                workspace_id
+            )
+
+        return self._tasks.list_for_workspace(
+            workspace_id=workspace_id,
+            status=status,
+            project_id=project_id,
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            order=order,
+            title_contains=title_contains,
+        )

@@ -17,3 +17,33 @@ class ProjectStorageDataError(Exception):
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
         super().__init__(f"Invalid project storage data: {file_path}")
+
+class UserNotFoundError(Exception):
+    pass
+
+
+class UserAlreadyExistsError(Exception):
+    pass
+
+
+class WorkspaceNotFoundError(Exception):
+    pass
+
+
+class WorkspaceAlreadyExistsError(Exception):
+    pass
+
+
+class DbProjectNotFoundError(Exception):
+    pass
+
+
+class DbProjectAlreadyExistsError(Exception):
+    pass
+
+
+class TaskProjectWorkspaceMismatchError(
+    Exception
+):
+    pass
+

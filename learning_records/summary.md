@@ -1,102 +1,151 @@
-# AI Workspace Lite｜项目进度摘要
+# AI Workspace Lite｜项目上下文与进度摘要
 
-> 最后更新：2026-09-28
->
-> 当前阶段：M3 进行中｜M3-T01 与 M3-T2,3,4 已完成
->
-> 正式进度：M1、M2 已完成；M3 已完成 T01～T04；下一任务 M3-T05｜Router / Service / Repository 分层
+> **更新日期**：2026-10-11  
+> **远程仓库**：https://github.com/Ivian-S/AI_workspace_Lite  
+> **当前阶段**：M3｜PostgreSQL、ORM、项目分层与权限  
+> **当前进度**：M1、M2 已完成；M3-T01、M3-T2,3,4 已完成；**M3-T5,6,7,8 技术验收通过，正式记录与远程同步状态待确认**。  
+> **下一任务**：M3-T09｜密码 Hash、登录与 Token。  
+> **最近一次有证据的全量测试**：67 passed，2 warnings（用户开发环境；配置了独立 PostgreSQL 测试库）。
 
-## 里程碑进度
+## 1. 项目定位与信息优先级
 
-| 里程碑 | 状态 | 完成日期 | 结果 |
-| --- | --- | --- | --- |
-| M1 Python 工程化地基 | 已完成 | 2026-08-29 | 多文件工程、分层、异常、JSON CRUD、CLI、pytest、Debugger、Git 基线 |
-| M2 HTTP 与 FastAPI 后端基础 | 已完成 | 2026-09-21 | FastAPI Web API、CRUD、校验、统一异常、日志排错、接口自动化测试 |
-| M3 PostgreSQL、ORM、项目分层与权限 | 进行中 | — | M3-T01～T04 已完成；下一任务 M3-T05 |
-| M4 Linux 服务排错与 Docker 化 | 待开始 | — | — |
-| M5 大模型服务集成 | 待开始 | — | — |
-| M6 安全 Tool Calling | 待开始 | — | — |
-| M7 Workflow、Agent 与知识库 | 待开始 | — | — |
-| M8 工程收口、故障演练与面试级验收 | 待开始 | — | — |
+AI Workspace Lite 是一个持续演进的 Python 后端学习与工程实战项目：从 CLI 项目管理器出发，逐步实现 FastAPI、PostgreSQL 多工作空间后端、Docker、LLM、Tool Calling、Workflow/RAG，最终形成可演示和排错的 AI 项目助手。
 
-## M1 原子任务
+本文件是供 AI 助手**快速接手项目**的上下文索引，不是源码、API 规范或完整学习笔记。后续判断以以下顺序为准：
 
-M1-T01 ～ M1-T08 全部完成。
+1. **GitHub 当前分支的实际源码与配置**：判断“现在代码怎么运行”。
+2. **`learning_records/` 中的任务验收记录和真实测试输出**：判断“完成过什么、验证过什么”。
+3. **`StudyPLAN.md`**：判断任务目标、先后顺序和学习边界。
+4. **本 `summary.md`**：快速建立全貌；与实时源码冲突时应更新摘要。
+5. **`README.md`、`AGENTS.md`**：曾出现明显落后于工程进度的版本，使用前必须与现行代码交叉核对。
 
-## M2 原子任务
+
+
+## 2. 里程碑与任务状态
+
+| 范围 | 状态 | 关键成果 / 下一步 |
+| --- | --- | --- |
+| M1｜Python 工程化地基 | ✅ 完成（2026-08-29） | dataclass、Service/Storage、JSON CRUD、CLI、pytest、Debugger、Git |
+| M2｜HTTP 与 FastAPI | ✅ 完成（2026-09-21） | FastAPI CRUD、Pydantic 校验、异常处理、日志、HTTP 自动化测试 |
+| M3-T01｜PostgreSQL 与 SQL CRUD | ✅ 完成 | 本地 PostgreSQL、手写 SQL CRUD、独立练习表 |
+| M3-T2,3,4｜原 T02～T04 合并 | ✅ 完成（2026-09-28 验收基线） | 七张核心表、PK/FK/UNIQUE、SQLAlchemy ORM、Engine/Session |
+| M3-T5,6,7,8｜原 T05～T08 合并 | ✅ 技术验收通过；📝 记录同步待核 | Repository 分层、Alembic、跨表事务、分页/筛选/排序/JOIN |
+| M3-T09｜密码 Hash、登录与 Token | ▶️ 下一任务 | 尚未开始 |
+| M3-T10｜401/403 与 Workspace 权限隔离 | ⏳ 待开始 | 尚未实现真实身份认证和成员权限控制 |
+| M3-T11～T12｜安全文件上传、下载与删除 | ⏳ 待开始 | 文件业务与权限校验尚未进入验收 |
+| M4～M8 | ⏳ 待开始 | Linux/Docker → LLM → Tool Calling → Workflow/RAG → 工程收口 |
+
+M1-T01～T08、M2-T01～T08 均已完成。任务合并名称固定为 **`M3-T2,3,4`** 与 **`M3-T5,6,7,8`**，不要误以为原子任务被跳过。
+
+**收口规则**：技术测试通过和“任务记录已写入仓库”是两个不同事实。前一组 M3-T2,3,4 已由用户确认收尾并同步；后一组 M3-T5,6,7,8 的技术验收已通过，但其 `learning_records/M3-T5,6,7,8.md` 是否已写入并推送，尚无本轮确认。
+
+## 3. 当前系统架构：两条业务链并存
+
+### 3.1 M1/M2 原有 JSON 业务链（保留兼容）
 
 ```text
-M2-T01  HTTP 请求/响应与 REST         ✅ 已完成
-M2-T02  FastAPI 最小应用与启动流程    ✅ 已完成
-M2-T03  路径参数与查询参数             ✅ 已完成
-M2-T04  Pydantic 请求体与校验          ✅ 已完成
-M2-T05  Projects CRUD API              ✅ 已完成
-M2-T06  404、重复数据与统一异常         ✅ 已完成
-M2-T07  日志与请求排错                  ✅ 已完成
-M2-T08  FastAPI 接口测试               ✅ 已完成
+CLI / FastAPI 旧版 /projects
+  → ProjectService
+  → InMemoryProjectStorage（测试）/ JsonProjectStorage（持久化）
+  → data/projects.json
 ```
 
-已生成 / 更新记录：
+- 领域模型 `app.models.Project` 是 dataclass：`name / description / tags / members`。
+- 原 `ProjectService` 负责 CRUD；CLI 和 Web 共用 Service，业务异常由各入口转换。
+- 旧版项目以 `name` 查询，`PATCH` 使用 `model_dump(exclude_unset=True)` 保留未提交字段。
+- JSON 业务链**没有自动迁移到 PostgreSQL**，也不等同于新的 Workspace-scoped `ProjectRow`。
+- 原 `/projects` 路由和原有测试暂时保留，避免在 M3 数据库演进时破坏 M2 基线。
+
+### 3.2 M3 新增 PostgreSQL 业务链（已跑通）
 
 ```text
-M2-T01.md
-M2-T02.md
-M2-T03.md
-M2-T04.md
-M2-T05.md
-M2-T06.md
-M2-T07.md
-M2-T08.md
-M2.md
+HTTP Client
+  → FastAPI Router / Pydantic Schema
+  → UserDbService / WorkspaceDbService / ProjectDbService / TaskDbService
+  → UserRepository / WorkspaceRepository / ProjectRepository / TaskRepository
+  → SQLAlchemy Session → Engine → Psycopg
+  → PostgreSQL（ai_workspace_lite）
 ```
 
-## M3 原子任务
+**职责边界：**
+
+- **Router**：参数、HTTP 响应与错误码；不直接编写 SQL。
+- **Service**：业务规则、跨对象校验、事务边界；不依赖 HTTP 协议。
+- **Repository**：ORM 查询、JOIN、增删改与 `flush()`；不自行 `commit()`。
+- **Session/Engine**：Session 是工作单元和事务状态，Engine 管理数据库连接基础设施。
+- **Database**：执行 PK、FK、UNIQUE 等约束。**FK 不等于登录校验或访问授权**。
+- `get_session()` 负责请求内 Session 生命周期；`with session.begin()` 负责业务事务生命周期。
+
+**重要区别**：`app.models.Project`（原领域对象）与 `app.db.models.ProjectRow`（数据库 ORM 行）目前是不同模型；不要擅自合并、替换旧存储或假设二者字段完全一致。
+
+## 4. 核心目录与查阅入口
+
+以下是已知的关键路径；若仓库发生重构，**以 GitHub 实际文件树为准**：
 
 ```text
-M3-T01      PostgreSQL 基础与 SQL CRUD                    ✅ 已完成
-M3-T2,3,4  主外键/实体关系 + 核心表 + SQLAlchemy ORM      ✅ 已完成
-            （合并原 M3-T02 / M3-T03 / M3-T04）
-M3-T05      Router / Service / Repository 分层             ▶️ 下一任务
-M3-T06      数据库迁移                                     ⏳ 待开始
-M3-T07      事务                                           ⏳ 待开始
-M3-T08      分页、排序、筛选与 JOIN                        ⏳ 待开始
-M3-T09      密码 Hash、登录与 Token                        ⏳ 待开始
-M3-T10      401 / 403 与工作空间权限隔离                   ⏳ 待开始
-M3-T11      安全文件上传                                   ⏳ 待开始
-M3-T12      文件下载/删除与权限校验                        ⏳ 待开始
+project/
+├── app/
+│   ├── main.py                    # FastAPI 入口、旧路由及全局日志/异常机制
+│   ├── models.py                  # M1/M2 Project dataclass
+│   ├── services.py                # 原 ProjectService + M3 数据库业务 Service
+│   ├── storage.py                 # InMemory/JSON Storage
+│   ├── exceptions.py              # 领域/数据库业务异常
+│   ├── m3_schemas.py              # M3 HTTP Request/Response Schema
+│   ├── api/workspace.py           # M3 用户、工作空间、项目、任务路由
+│   ├── db/
+│   │   ├── base.py                # Declarative Base
+│   │   ├── models.py              # 七张正式表的 ORM 映射
+│   │   └── session.py             # Engine、SessionLocal、get_session
+│   └── repositories/
+│       ├── users.py
+│       ├── workspaces.py
+│       ├── projects.py
+│       └── tasks.py
+├── migrations/
+│   ├── env.py                     # Alembic migration environment
+│   └── versions/                  # Schema revisions
+├── tests/
+│   ├── test_web_api.py            # 旧 /projects HTTP 行为测试
+│   └── test_m3_database.py        # M3 PostgreSQL 集成测试（独立测试库）
+├── learning_records/             # 逐任务验收记录与本 summary
+├── sql/m3_t01_projects.sql        # T01 手写 SQL 学习资产
+├── alembic.ini
+├── pyproject.toml
+├── StudyPLAN.md
+├── AGENTS.md
+└── README.md
 ```
 
-已生成 / 更新记录：
+目录仅突出核心模块，不表示上述是仓库的全部文件。尤其 `app/db/init_db.py` 是早期 `create_all()` 学习入口，**正式 Schema 应通过 Alembic 管理**；如该文件仍存在，不应将其作为正式迁移工具。
 
-```text
-M3-T01.md
-M3-T2,3,4.md
-summary.md
-```
+## 5. 数据库模型与关键不变量
 
-## M2 已完成能力概览
+正式数据库 `ai_workspace_lite` 的七张核心表：
 
-### M2-T01｜HTTP / REST
+| 表 | 关键身份/关系 | 业务作用 |
+| --- | --- | --- |
+| `users` | `id` PK；`username`、`email` UNIQUE | 用户 |
+| `workspaces` | `id` PK；`owner_user_id → users.id` | 工作空间 |
+| `workspace_members` | `(workspace_id, user_id)` 联合 PK；双 FK；`role` | 用户—工作空间成员关系 |
+| `projects` | `id` PK；`workspace_id → workspaces.id`；`(workspace_id, name)` UNIQUE | 工作空间内的项目 |
+| `tasks` | `id` PK；`workspace_id` FK；可空 `project_id` FK | 独立任务或项目内任务 |
+| `files` | `id` PK；关联 Workspace 和上传者 | 文件元数据，文件 API 尚未开发 |
+| `operation_logs` | `id` PK；可关联 Workspace/操作人 | 操作记录模型 |
 
-已建立 HTTP Request / Response、Method、URL、Header、Body、Status Code、REST、Router / Service / Storage 边界，以及 CLI exit code 与 HTTP status code 的区别。
+已通过数据库实际验证：`users` 唯一约束、`workspace_members` 联合主键、`projects` 的 Workspace 内名称唯一性与外键，以及非法 `projects.workspace_id` 被 PostgreSQL 拒绝。
 
-### M2-T02｜FastAPI 最小应用
+已在 M3-T5,6,7,8 **业务层**验证的关键规则：
 
-已建立 FastAPI application、Uvicorn ASGI Server、最小 Route、`app.main:app`、OpenAPI 与 Swagger UI。
+- 创建 Workspace 必须在**同一事务**写入 `workspaces` 与 owner 的 `workspace_members(role='owner')`；人为使第二步失败时，第一步回滚。
+- 创建 Task 时，若 `project_id` 不为空，Service 检查项目确实属于所请求的 Workspace；跨 Workspace 关联被拒绝。
+- 但 `tasks.workspace_id` 和 `tasks.project_id` 的**两个独立 FK**本身仍不能保证这层一致性。未来可评估更强的数据库约束，现阶段不能将 Service 校验误写为 DB 约束。
+- `role`、`status` 目前为字符串字段；正式权限策略、身份认证尚未落地。
 
-### M2-T03｜Path / Query
+## 6. 已实现的 HTTP 与查询能力
 
-已建立 Path Parameter、Query Parameter、required / optional、`int` / `bool` 类型转换，以及非法 Query → 422 的调用链。
+**保留的 M2 路由：**
 
-### M2-T04｜Pydantic Request Body
-
-已建立 Pydantic `BaseModel`、Request Schema、`Field` 约束、required / optional、允许 `None` 与允许字段缺失的区别，以及 RequestValidationError → 422。
-
-### M2-T05｜Projects CRUD API
-
-已实现：
-
-```text
+```http
 POST   /projects
 GET    /projects
 GET    /projects/{project_name}
@@ -104,740 +153,114 @@ PATCH  /projects/{project_name}
 DELETE /projects/{project_name}
 ```
 
-Web Route 已正式接入：
+**新增并有 HTTP/集成测试证据的 M3 路由：**
 
-```text
-ProjectService
-→ JsonProjectStorage
-→ data/projects.json
+```http
+POST /users
+POST /workspaces
+POST /workspaces/{workspace_id}/projects
+POST /workspaces/{workspace_id}/tasks
+GET  /workspaces/{workspace_id}/tasks
 ```
 
-PATCH 使用 `model_dump(exclude_unset=True)` 区分未发送字段与显式值，并由 Router 合并部分更新后复用现有完整替换 Service。
+M3 Task 列表已支持：
 
-### M2-T06｜统一业务异常
+- `limit / offset` 分页，返回 `items / total / limit / offset`；`total` 是分页之前符合筛选条件的总数。
+- `status`、`project_id`、`title_contains` 组合筛选；限定 Workspace 范围。
+- `sort_by`（`created_at / title / status`）和 `order`（`asc / desc`），排序字段经白名单选择，**不拼接用户输入到 SQL**。
+- LEFT OUTER JOIN `projects` 返回 `project_name`；无项目的 Task 仍被保留。
+- `title_contains` 采用不区分大小写的 `ILIKE`，并先转义 `/`、`%`、`_` 后使用 `escape="/"`，使搜索词里的通配符按字面匹配。
 
-已建立：
+**注意**：“所有查询带 `workspace_id` 过滤”目前只是数据范围控制，**不是已实现的用户权限隔离**。M3-T09/T10 完成之前，不能把这些路由描述为受身份认证和 Workspace 成员授权保护。
 
-```text
-ProjectNotFoundError
-→ FastAPI exception handler
-→ 404
+M2 已稳定具备 404/409/422 错误转换，以及 `request_complete`、`business_error`、`validation_error`、`request_failed` 等日志；未知异常保持 500 和 traceback 排错语义，不默认记录密码、Token 或完整请求 Body。
 
-ProjectAlreadyExistsError
-→ FastAPI exception handler
-→ 409
-```
+## 7. Alembic、事务与最新数据库基线
 
-Service 不依赖 `HTTPException` / FastAPI；CLI 与 Web 各自翻译同一个业务异常。
+**已验收环境（来自用户开发机输出，非版本锁定承诺）：**
 
-### M2-T07｜日志与请求排错
+| 组件 | 已记录版本 |
+| --- | --- |
+| Python | 3.14.6 |
+| PostgreSQL | 16.15 |
+| SQLAlchemy | 2.1.1 |
+| Psycopg | 3.3.6 |
+| Alembic | 1.20.0 |
 
-已正式完成并验证：
-
-```text
-request_complete
-business_error
-validation_error
-request_failed
-method / path / status / duration
-routing 404 与 business 404 区分
-body / query 422 定位
-500 traceback 文件 / 行号定位
-```
-
-实际日志已经证明：
+**Migration 链（实测）：**
 
 ```text
-GET /projects
-→ request_complete
-→ 200
-
-GET /does-not-exist
-→ request_complete
-→ 404
-→ 无 business_error
-→ routing 404
-
-GET /projects/m2-t07-missing
-→ business_error type=ProjectNotFoundError
-→ request_complete
-→ 404
-→ business 404
-
-POST /projects name=""
-→ validation_error loc=body.name
-→ 422
-
-GET /parameter-demo/alpha?limit=abc
-→ validation_error loc=query.limit
-→ 422
-
-GET /debug/m2-t07-boom
-→ request_failed error_type=RuntimeError
-→ HTTP 500
-→ traceback 定位 app/main.py:67
-→ debug_m2_t07_boom
+<base> → 908eb712de1e  baseline core schema
+       → 7e0798b22604  add task query indexes  (head)
 ```
 
-临时 `/debug/m2-t07-boom` 故障路由已删除，随后再次执行全量回归：
+最近一次 `alembic current` 位于 `7e0798b22604 (head)`；`alembic check` 返回 `No new upgrade operations detected.`。
+
+`tasks` 已验证的查询索引：
 
 ```text
-47 passed in 1.84s
+ix_tasks_workspace_project_id
+ix_tasks_workspace_status_created_at
 ```
 
-因此 M2-T07 已完成完整闭环：
+`m3_t01_projects` 是早期学习表，**不属于七张正式业务表**；后续 Alembic 自动比较应避免将它误判为需要删除的正式 Schema 变更。
 
-```text
-日志观察
-→ 故障复现
-→ traceback 定位
-→ 删除临时故障代码
-→ 全量回归
-```
+**事务原则**：Service 持有 `session.begin()` 边界，Repository 只 `add/flush/query`，同一业务动作的多表写入要么共同成功要么一起回滚；不要在 Repository 各自 commit。
 
-### M2-T08｜FastAPI 接口测试
+## 8. 自动化验证与可复现命令
 
-已新增：
+| 验证批次 | 真实记录结果 |
+| --- | --- |
+| M2 完成时 | 57 passed |
+| M3-T2,3,4 完成时 | 57 passed，2 warnings |
+| M3-T5,6,7,8 新增 PostgreSQL 集成测试 | 10 passed |
+| **最近一次包含 PostgreSQL 测试的全量回归** | **67 passed，2 warnings** |
+| 最近一次 Alembic 检查 | head 正确；无新 migration 差异 |
 
-```text
-tests/test_web_api.py
-```
+M3 的十项数据库测试覆盖 owner membership、失败回滚、项目重名、跨 Workspace 项目/任务不一致、筛选、分页与 total、排序、LEFT JOIN、`title_contains`。旧 57 项测试仍通过。
 
-共 10 条真实 HTTP application 行为测试，覆盖：
-
-```text
-空状态
-Create
-List
-Get One
-PATCH 部分更新
-Delete
-404
-409
-422
-```
-
-测试通过 `TestClient` 直接驱动 ASGI application，不要求启动 Uvicorn。
-
-测试 fixture 使用：
-
-```text
-ProjectService
-→ InMemoryProjectStorage
-```
-
-替换正式 Web service 的 JSON Storage，从而保证：
-
-```text
-test isolation
-不污染 data/projects.json
-测试独立 / 可重复 / 顺序无关
-```
-
-最终验证：
-
-```text
-test_web_api.py → 10 passed
-Web tests       → 17 passed
-full suite      → 57 passed
-```
-
-M2-T08 同时建立：
-
-```text
-只测 status code 不足以保护业务行为
-Response Body / 状态变化也必须断言
-```
-
-当前接口测试依赖栈存在 2 条第三方 deprecation warning，均不影响测试通过；Starlette TestClient 的 `httpx` fallback 已提示迁移到 `httpx2`，作为依赖维护项记录。
-
-## M3 当前进度
-
-### M3-T01｜PostgreSQL 基础与 SQL CRUD
-
-已在 PostgreSQL 16.15 中完成单表 SQL CRUD：
-
-```text
-INSERT
-SELECT / WHERE / ORDER BY
-UPDATE
-DELETE
-```
-
-并完成 `ai_workspace_lite` 数据库与 `m3_t01_projects` 学习表验证。
-
-### M3-T2,3,4｜关系设计 + 核心表 + ORM / Session
-
-本任务合并原 M3-T02、M3-T03、M3-T04。
-
-已完成七张正式核心表：
-
-```text
-users
-workspaces
-workspace_members
-projects
-tasks
-files
-operation_logs
-```
-
-已经实际验证：
-
-```text
-users.id                       → PRIMARY KEY
-users.username / email         → UNIQUE
-workspace_members              → (workspace_id, user_id) 联合主键
-workspace_members.user_id      → users.id
-workspace_members.workspace_id → workspaces.id
-projects.workspace_id          → workspaces.id
-projects(workspace_id, name)   → UNIQUE
-tasks.workspace_id             → workspaces.id
-tasks.project_id               → projects.id
-```
-
-非法：
-
-```text
-projects.workspace_id = 999999
-```
-
-已被 PostgreSQL Foreign Key 直接拒绝。
-
-当前 ORM 栈：
-
-```text
-SQLAlchemy 2.1.1
-Psycopg 3.3.6
-PostgreSQL 16.15
-```
-
-Session 已实际验证：
-
-```text
-ORM Object
-→ session.add()
-→ id = None
-→ flush()
-→ PostgreSQL 生成 id
-→ commit()
-→ 新 Session reload
-```
-
-本阶段仍未将 FastAPI / Service 切换到 PostgreSQL；正式业务链仍使用 `JsonProjectStorage`。
-
-## 当前项目能力
-
-### Domain / Service / Storage
-
-- `Project` 使用 dataclass，字段为 `name / description / tags / members`。
-- `ProjectService` 支持完整 CRUD。
-- `InMemoryProjectStorage` 保留内存实现。
-- `JsonProjectStorage` 支持 JSON 持久化。
-- 非法 JSON / 非法存储数据使用 `ProjectStorageDataError`。
-- 重复名称使用 `ProjectAlreadyExistsError`。
-- Project 不存在使用 `ProjectNotFoundError`。
-- Service 不直接访问 Storage 内部状态。
-- Update Service 保持完整替换语义。
-
-### CLI
-
-- CLI 支持 create / list / get / update / delete。
-- CLI 不直接操作 JSON。
-- CLI 与 Web 复用相同 Service。
-- 已知业务 / 存储错误转换为 CLI 错误输出与 exit code。
-
-### Web / FastAPI
-
-- FastAPI 与 CLI 入口共存。
-- Uvicorn 作为 ASGI Server。
-- 已完成 Path / Query 与 Request Body 学习路由。
-- 已实现 Projects HTTP CRUD。
-- 请求校验失败返回 422。
-- Project 不存在统一返回 404。
-- Project 名称冲突统一返回 409。
-- 已建立 HTTP middleware 请求日志。
-- 已建立业务异常日志。
-- 已建立 RequestValidationError 日志。
-- 422 Response 继续复用 FastAPI 默认 handler。
-- 当前没有默认记录完整 Body、Token 等敏感数据。
-- 未知异常会记录 `request_failed`，随后重新抛出并保持 HTTP 500 语义。
-- 已通过临时 RuntimeError 实验验证 traceback 能定位到自己项目文件与实际行号。
-- 临时 debug route 已删除，并完成删除后的全量回归。
-- 已使用 FastAPI `TestClient` 建立真实 HTTP application 行为测试。
-- TestClient 测试不需要启动 Uvicorn。
-- API tests 使用独立 `InMemoryProjectStorage`，不写真实 `data/projects.json`。
-- 已建立 Create / List / Get / Patch / Delete / 404 / 409 / 422 自动回归。
-- PATCH 测试同时断言响应内容，保护未发送字段不会被清空。
-
-
-### PostgreSQL / ORM
-
-- PostgreSQL 16.15 已作为本地学习数据库运行。
-- 已创建 `ai_workspace_lite`。
-- 已建立七张正式核心表：`users / workspaces / workspace_members / projects / tasks / files / operation_logs`。
-- 已掌握 PK、FK、UNIQUE、一对多、多对多中间表。
-- 已验证 `workspace_members` 联合主键。
-- 已验证 `projects(workspace_id, name)` workspace 内唯一性。
-- 已通过非法 `workspace_id` 插入实验确认数据库级 FK 引用完整性。
-- SQLAlchemy 2.1.1 + Psycopg 3.3.6 已接入。
-- 已建立 Declarative ORM、Engine 与 Session。
-- 已实际验证 `add → flush → generated id → commit → reload`。
-- `create_all()` 当前仅用于首次 bootstrap，不视为 migration。
-- FastAPI / Service 尚未切换到 PostgreSQL；该接入属于 M3-T05。
-
-## 当前调用关系
-
-### Web 正常请求
-
-```text
-Client
-→ Uvicorn
-→ HTTP logging middleware
-→ FastAPI
-→ Route
-→ ProjectService
-→ JsonProjectStorage
-→ HTTP Response
-→ request_complete
-→ Uvicorn access log
-```
-
-### Routing 404
-
-```text
-Client
-→ middleware
-→ FastAPI route matching
-→ no matching route
-→ 404 Response
-→ request_complete(status=404)
-```
-
-没有：
-
-```text
-business_error
-```
-
-### Business 404
-
-```text
-Client
-→ middleware
-→ Route
-→ ProjectService
-→ ProjectNotFoundError
-→ business_error
-→ exception handler
-→ 404 Response
-→ request_complete(status=404)
-```
-
-### Validation 422
-
-```text
-Client
-→ middleware
-→ FastAPI / Pydantic
-→ RequestValidationError
-→ validation_error(loc / type / msg)
-→ FastAPI 默认 validation handler
-→ 422 Response
-→ request_complete(status=422)
-```
-
-### 已验证的未处理 500 链
-
-```text
-Client
-→ middleware
-→ application code
-→ RuntimeError
-→ request_failed(error_type=RuntimeError)
-→ raise
-→ Uvicorn / ASGI traceback
-→ HTTP 500
-```
-
-本次实际 traceback 中：
-
-```text
-app/main.py:82
-log_http_request
-response = await call_next(request)
-```
-
-是异常传播经过 middleware 的位置；真正抛出异常的根因位置为：
-
-```text
-app/main.py:67
-debug_m2_t07_boom
-raise RuntimeError(...)
-
-RuntimeError: M2-T07 intentional failure
-```
-
-因此已经能够区分：
-
-```text
-异常传播经过点
-≠
-真正根因
-```
-
-### PostgreSQL Schema 初始化链
-
-```text
-ORM Classes
-→ Base.metadata
-→ create_all()
-→ Engine
-→ Psycopg
-→ PostgreSQL
-→ 7 张核心表
-```
-
-### SQLAlchemy Session 写入链
-
-```text
-ORM Object
-→ Session.add()
-→ pending
-→ flush()
-→ SQL
-→ Engine
-→ Psycopg
-→ PostgreSQL
-→ generated id
-→ commit()
-```
-
-### Web 自动测试调用链
-
-```text
-pytest
-→ TestClient
-→ FastAPI ASGI application
-→ middleware
-→ Pydantic / Route
-→ ProjectService
-→ InMemoryProjectStorage
-→ HTTP Response
-→ assert
-```
-
-生产与测试的主要入口区别：
-
-```text
-生产：
-HTTP socket → Uvicorn → ASGI application
-
-测试：
-TestClient → ASGI application
-```
-
-测试没有绕过 Route / Pydantic / exception handler，只是跳过真实网络 socket 和 Uvicorn。
-
-## 最新验证基线
-
-### 2026-09-28｜M3-T2,3,4
-
-实际环境：
-
-```text
-PostgreSQL 16.15
-SQLAlchemy 2.1.1
-Psycopg 3.3.6
-Python 3.14.6
-```
-
-数据库结构已经确认七张核心表存在，并验证关键 PK / UNIQUE / FK。
-
-Foreign Key 失败实验：
-
-```text
-INSERT projects(workspace_id=999999)
-→ ERROR
-→ projects_workspace_id_fkey
-```
-
-Session 实验：
-
-```text
-before flush: None
-after flush: 2
-loaded: 2 m3_t234_demo m3_t234_demo@example.com
-```
-
-全量回归：
+开发环境常用命令（在项目根目录、正确虚拟环境中执行）：
 
 ```bash
-pytest -q
-# 57 passed, 2 warnings in 2.37s
+python -m pip install -e ".[dev]"
+alembic current
+alembic history
+alembic check
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-因此当前正式 Python 测试基线仍为：
-
-```text
-57 tests passed
-```
-
-两条 warning 仍为既有 Starlette TestClient / AnyIO 第三方 deprecation warning，不属于数据库层失败。
-
-### 2026-09-21｜M2-T08 / M2
-
+**数据库测试必须显式指向独立测试库**，不得使用正式 `ai_workspace_lite`：
 
 ```bash
-pytest tests/test_web_api.py -v
-# collected 10 items
-# 10 passed, 2 warnings in 0.44s
+TEST_DATABASE_URL=postgresql+psycopg:///ai_workspace_lite_test \
+python -m pytest tests/test_m3_database.py -q
+
+TEST_DATABASE_URL=postgresql+psycopg:///ai_workspace_lite_test \
+python -m pytest -q
 ```
 
-```bash
-pytest   tests/test_web_smoke.py   tests/test_web_api.py   -v
+运行前应为 `ai_workspace_lite_test` 完成 Alembic 迁移。数据库 fixture 检查 URL/实际数据库名称，使用外层事务与 SAVEPOINT 隔离，每条测试结束回滚。**如果未设置 `TEST_DATABASE_URL`，数据库集成测试会跳过；不能将这种结果算作 67 项全覆盖。**
 
-# collected 17 items
-# 17 passed, 2 warnings in 0.48s
-```
+当前 2 条 warning 分别来自 Starlette TestClient 的 `httpx` 兼容迁移提示与 Starlette/AnyIO 的弃用 API；它们不是本次测试失败。新增的特殊字符筛选和 `project_id` 组合筛选增强测试曾被建议，但**尚无它们在用户 PostgreSQL 环境中实际通过的证据**，不得计入 67 项基线。
 
-```bash
-pytest -q
-# 57 passed, 2 warnings in 1.01s
-```
+## 9. 已知边界、文档债务和下一步
 
-本次材料没有单独提供：
+**已知但不阻断当前验收：**
 
-```bash
-pytest --collect-only -q
-```
+- 旧 JSON Project 与新 PostgreSQL Project 分属两条业务链；**尚未进行数据迁移或统一 CRUD**。
+- Task–Project 的 Workspace 一致性已由 Service 校验，但不是两个独立 FK 自动保障。
+- Workspace owner 与 owner membership 的原子创建已实现；更完整的角色授权、Token、401/403 尚未实现。
+- 文件表和操作日志表已有 ORM 模型，不代表文件上传、下载、审计 API 已完成。
+- 任务状态/成员角色仍可在后续业务阶段强化约束。
+- `README.md` / `AGENTS.md` 曾出现滞后，后续 AI 应先读实际代码与最新学习记录。
+- M3-T5,6,7,8 的**技术验收已通过**，但正式学习记录和远程同步状态仍待确认。
 
-但已经实际确认：
+**下次继续工作时的顺序：**
 
-```text
-test_web_api.py → 10 tests collected and passed
-Web tests       → 17 tests collected and passed
-full suite      → 57 passed
-```
+1. 核对 GitHub 实时源码、Alembic revisions、`tests/test_m3_database.py`，确认本文件未过时；核实 `learning_records/M3-T5,6,7,8.md` 是否已同步，必要时补齐收口。
+2. 进入 **M3-T09｜密码 Hash、登录与 Token**；基于已有 `users`、Service/Repository、Session/Migration 体系做增量实现，不重新起一套项目。
+3. 随后 **M3-T10｜401/403 与工作空间成员权限隔离**，再进入文件安全任务 T11/T12；不要提前宣称认证/授权已经完成。
+4. 每张任务先解释数据流与职责边界，再做最小增量；覆盖成功和失败路径；取得真实测试结果后写 `learning_records/Mx-Txx.md` 并更新本摘要，再标记正式收口。
 
-当前正式测试基线：
-
-```text
-57 tests passed
-```
-
-当前测试构成：
-
-```text
-test_smoke.py            2
-test_project_state.py   11
-test_services.py        13
-test_json_storage.py     7
-test_cli.py              7
-test_web_smoke.py        7
-test_web_api.py         10
---------------------------
-Total                   57
-```
-
-M2-T08 API behavior tests：
-
-```text
-test_projects_start_empty
-test_create_project
-test_list_projects
-test_get_project
-test_patch_project_preserves_unsent_fields
-test_delete_project
-test_missing_project_returns_404
-test_duplicate_project_returns_409
-test_patch_rename_conflict_returns_409
-test_invalid_project_body_returns_422
-```
-
-当前 pytest 有 2 条第三方 deprecation warning：
-
-```text
-Starlette TestClient:
-httpx fallback deprecated; prefer httpx2
-
-Starlette / AnyIO:
-anyio.abc.BlockingPortal alias deprecated
-```
-
-处理原则：
-
-```text
-不把 warning 当作测试失败
-不隐藏所有 DeprecationWarning
-不修改 site-packages
-记录并在依赖维护时迁移兼容版本
-```
-
-其中 TestClient dev dependency 建议迁移到：
-
-```toml
-"httpx2>=2.13,<3"
-```
-
-## 当前设计结论
-- 数据库稳定身份使用整数 Primary Key，不再让 `Project.name` 承担数据库身份。
-- `UNIQUE` 表达业务唯一性，`PRIMARY KEY` 表达稳定行身份，两者职责不同。
-- `ForeignKey` 保证引用完整性，但不等于认证或权限校验。
-- `workspace_members` 使用联合主键表达 User ↔ Workspace 多对多成员关系。
-- `projects(workspace_id, name)` 保证项目名仅在 Workspace 内唯一。
-- `relationship()` 属于 ORM 对象导航；真正的数据库引用约束由 `ForeignKey` 提供。
-- `Session.add()` 只让对象进入 Session 管理；`flush()` 才会把待处理变化同步到数据库；`commit()` 提交事务。
-- `Base.metadata.create_all()` 只作为当前空数据库 bootstrap 手段，不替代后续 migration。
-- 当前 `tasks.workspace_id` 与 `tasks.project_id` 仍存在“Project 与 Workspace 一致性”待后续业务校验或更强数据库约束解决。
-- 未来创建 Workspace 时，应保持 `owner_user_id` 与 `workspace_members(role='owner')` 的业务一致性。
-
-- Model 负责领域数据。
-- Service 负责业务动作与业务规则。
-- Storage 负责数据存取。
-- CLI 负责命令行协议翻译。
-- FastAPI Route 负责 HTTP 协议翻译。
-- Service 不依赖 FastAPI。
-- Web 与 CLI 共用 Service。
-- Pydantic Schema 属于 HTTP 边界。
-- RequestValidationError 继续由 FastAPI 默认机制生成 422。
-- `ProjectNotFoundError` 统一翻译为 404。
-- `ProjectAlreadyExistsError` 统一翻译为 409。
-- HTTP Status 相同不代表故障发生在同一层。
-- routing 404 与 business 404 必须结合应用日志区分。
-- 422 排错优先读取 `loc` 判断 path / query / body。
-- Uvicorn access log 表达 HTTP 访问结果；application log 表达应用内部上下文。
-- middleware 可捕获 `Exception` 用于记录，但必须 `raise` 让未知异常继续传播。
-- 不使用 `except Exception` 把服务器 Bug 伪装为 4xx。
-- 日志默认不记录完整 Request Body、密码、Token 或 Authorization Header。
-- 日志不能代替异常处理，异常处理也不能代替日志。
-- 500 排错必须最终落到 traceback 中的错误类型、自己项目文件与实际行号。
-- 已实际验证 `request_failed → raise → HTTP 500 → traceback` 的完整异常链。
-- traceback 中 middleware 的 `call_next()` 行是传播经过点，真正根因应继续向下定位到最内层自己代码。
-- 临时故障代码用于实验后必须删除，并重新执行全量回归确认正式基线。
-- TestClient 直接驱动 ASGI application，不要求真实 TCP/Uvicorn。
-- Web API tests 使用 test-only InMemoryProjectStorage，避免污染真实 JSON 数据。
-- 测试必须隔离状态，不能依赖测试执行顺序。
-- 只断言 HTTP status 不能充分证明业务行为正确；关键 Response Body 和状态变化也应验证。
-- `test_json_storage.py`、`test_services.py`、`test_web_smoke.py`、`test_web_api.py` 分别保护不同测试层。
-- M2 最终已经把人工 curl 验证转换为自动 HTTP 回归测试。
-
-
-## 当前 M2 能力边界
-
-M2 已正式完成：
-
-```text
-HTTP / REST
-FastAPI application
-Uvicorn
-OpenAPI / Swagger
-Path / Query
-Pydantic Request Body
-422
-Projects CRUD API
-PATCH partial update
-Router → Service → Storage
-404
-409
-FastAPI exception handler
-业务异常 → HTTP Response
-HTTP middleware 日志
-routing 404 / business 404 定位
-validation_error 定位
-500 request_failed
-traceback 文件 / 行号定位
-FastAPI TestClient
-HTTP 接口自动化测试
-test isolation
-```
-
-M2 未提前进入：
-
-```text
-PostgreSQL
-SQLAlchemy
-Repository
-数据库 Migration / Transaction
-认证 / 权限
-Docker
-LLM API
-Tool Calling
-Workflow / RAG
-```
-
-## 当前 M3 能力边界
-
-M3 当前已完成：
-
-```text
-PostgreSQL 基础 SQL CRUD
-Primary Key / Foreign Key / UNIQUE
-一对多 / 多对多关系设计
-七张核心表
-SQLAlchemy typed ORM
-Declarative Base
-Engine
-Session
-add / flush / commit
-数据库级 FK 失败实验
-```
-
-M3 当前尚未进入：
-
-```text
-Repository
-Service → PostgreSQL
-FastAPI → PostgreSQL
-Migration
-多表事务
-JOIN / 分页 / 排序 / 筛选
-认证 / Token
-Workspace 权限
-文件安全
-```
-
-## 下一步：M3-T05
-
-M3 当前：
-
-```text
-M3-T01
-PostgreSQL 基础与 SQL CRUD
-✅ 已完成
-
-M3-T2,3,4
-主键/外键与实体关系
-+ 七张核心表
-+ SQLAlchemy ORM / Session
-✅ 已完成
-```
-
-当前存在两条尚未接通的链：
-
-```text
-应用业务链：
-Client / CLI
-→ FastAPI / CLI
-→ ProjectService
-→ JsonProjectStorage
-→ data/projects.json
-```
-
-```text
-数据库链：
-ORM Object
-→ Session
-→ SQLAlchemy
-→ Psycopg
-→ PostgreSQL
-→ users / workspaces / workspace_members / projects / tasks / files / operation_logs
-```
-
-下一任务：
-
-```text
-M3-T05｜Router / Service / Repository 分层
-```
-
-M3-T05 的核心不是继续堆表，而是把数据库访问职责收进 Repository，并开始让 Service 面向 Repository 工作；仍不会把 SQL 直接塞进 Router。
+**本摘要的维护目标**：只保留 *现在是什么、已经验证了什么、仍缺什么、去哪里查源码、下一步是什么*。逐行 SQL、长篇课程讲解、单次 traceback 和完整测试日志应留在源码、测试文件或相应的 `learning_records/`，不要再复制到这里。

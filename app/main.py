@@ -26,6 +26,7 @@ from app.info import APP_VERSION
 from app.models import Project
 from app.services import ProjectService
 from app.storage import JsonProjectStorage
+from app.api.workspace import router as workspace_router
 
 DEFAULT_STORAGE_PATH = Path("data/projects.json")
 logger = logging.getLogger("uvicorn.error")
@@ -59,7 +60,7 @@ app = FastAPI(
     version=APP_VERSION,
 )
 
-
+app.include_router(workspace_router)
 
 @app.middleware("http")
 async def log_http_request(

@@ -9,6 +9,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    Index,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -159,6 +160,20 @@ class ProjectRow(Base):
 
 class TaskRow(Base):
     __tablename__ = "tasks"
+
+    __table_args__ = (
+        Index(
+            "ix_tasks_workspace_status_created_at",
+            "workspace_id",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "ix_tasks_workspace_project_id",
+            "workspace_id",
+            "project_id",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     workspace_id: Mapped[int] = mapped_column(
